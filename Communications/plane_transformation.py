@@ -51,7 +51,7 @@ def get_perifocal_vectors(eccentricity: float,
         np.ndarray: Position and velocity vectors in the perifocal frame.
     """
     # Calculate the radial distance
-    r_mag = ((specific_angular_momentum ** 2)/ const.mu_EARTH ) * (1 / (1 + eccentricity * np.cos(true_anomaly)))
+    r_mag = ((specific_angular_momentum ** 2)/ const.mu ) * (1 / (1 + eccentricity * np.cos(true_anomaly)))
     
 
     # Calculate the position vector in the perifocal frame
@@ -60,8 +60,8 @@ def get_perifocal_vectors(eccentricity: float,
 
     r_perifocal = np.array([r_p, r_q, 0])
 
-    v_p = (const.mu_EARTH / specific_angular_momentum) * (-math.sin(true_anomaly))
-    v_q = (const.mu_EARTH / specific_angular_momentum) * (eccentricity + math.cos(true_anomaly))
+    v_p = (const.mu / specific_angular_momentum) * (-math.sin(true_anomaly))
+    v_q = (const.mu / specific_angular_momentum) * (eccentricity + math.cos(true_anomaly))
 
     # v_p = (r_dot * np.cos(true_anomaly)) - (r_theta_dot * np.sin(true_anomaly))
     # v_q = (r_dot * np.sin(true_anomaly)) + (r_theta_dot * np.cos(true_anomaly))

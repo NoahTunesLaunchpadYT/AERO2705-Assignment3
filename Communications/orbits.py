@@ -382,6 +382,5 @@ class Orbit:
         )
         propogated_orbit = solution.y
         propogated_times = solution.t
-        plot_orbit(propogated_orbit, "orbit")
         return propogated_orbit, propogated_times
     

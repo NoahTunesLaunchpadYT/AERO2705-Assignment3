@@ -1,5 +1,5 @@
 perigee altitude: alt_p = 400
-apogee altitude: alt_a = 400
+apogee altitude: alt_a = 450
 inclination: i_deg = 33.4
 RAAN: RAAN_deg = 149.58
 argument of perigee: arg_p_deg = 0

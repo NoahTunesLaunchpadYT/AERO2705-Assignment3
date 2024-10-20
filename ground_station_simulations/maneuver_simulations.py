@@ -78,7 +78,6 @@ def generate_hohmann_transfer(starting_orbit: o.Orbit, target_orbit: o.Orbit) ->
     n_1 = starting_orbit.normal
     n_2 = target_orbit.normal
     node_line = np.cross(n_1, n_2)
-    node_line_azimuth = np.arctan2(node_line[1], node_line[0])
 
     # Calculate true anomalies at node line
     ta_starting_orbit_at_node_line = get_true_anomaly_at_node_line(node_line, starting_orbit.perifocal_to_geocentric_rotation())
@@ -87,6 +86,10 @@ def generate_hohmann_transfer(starting_orbit: o.Orbit, target_orbit: o.Orbit) ->
     # Create Hohmann transfer orbit parameters
     hohmann_perigee = starting_orbit.get_radius(ta_starting_orbit_at_node_line)
     hohmann_apogee = target_orbit.get_radius(ta_target_orbit_at_node_line)
+    
+    if hohmann_perigee > hohmann_apogee:
+        hohmann_perigee, hohmann_apogee = hohmann_apogee, hohmann_perigee
+
     hohmann_inclination = starting_orbit.inclination_angle
     hohmann_raan = starting_orbit.raan
 
@@ -99,7 +102,7 @@ def generate_hohmann_transfer(starting_orbit: o.Orbit, target_orbit: o.Orbit) ->
 
     ascending_node = np.dot(rotation_matrix, vernal_equinox)
 
-    # Compute the cross product
+    # Compute the dot product
     dot_product = np.dot(ascending_node, node_line)
 
     # Compute the norms (magnitudes) of the vectors
@@ -156,6 +159,7 @@ def print_orbit_parameters(orbit, orbit_name):
     # Accessing the orbital parameters from the object
     semi_major_axis = orbit.semi_major_axis
     eccentricity = orbit.eccentricity
+    specific_angular_momentum = orbit.specific_angular_momentum
     # Convert angles from radians to degrees
     inclination_angle = np.degrees(orbit.inclination_angle)
     raan = np.degrees(orbit.raan)
@@ -164,6 +168,7 @@ def print_orbit_parameters(orbit, orbit_name):
     # Formatting and printing the parameters
     print(f"\n{orbit_name} Parameters:")
     print(f"  Semi-major axis       : {semi_major_axis:.2f} km")
+    print(f"  Specific angular momem: {specific_angular_momentum:.2f}  kg m^2 /s")
     print(f"  Eccentricity          : {eccentricity:.4f}")
     print(f"  Inclination angle     : {inclination_angle:.2f} degrees")
     print(f"  RAAN                  : {raan:.2f} degrees")

@@ -1,7 +1,7 @@
 import constants as const
 import numpy as np
 import scipy.integrate as spi
-import plane_transformation as pt
+import Communications.plane_transformation as pt
 
 def launch_dynamics(
         t: float,
@@ -31,12 +31,12 @@ def launch_dynamics(
 
     # System Dynamics
     r_mag = np.linalg.norm(r)
-    mu = const.mu_EARTH
+    mu = const.mu
 
     r_dot = v
     p = np.zeros(3)
     if J2:
-        p_mag = (3/2) * ((const.J2_EARTH * const.mu_EARTH * const.R_EARTH ** 2 )
+        p_mag = (3/2) * ((const.J2_EARTH * const.mu * const.R_EARTH ** 2 )
                             / r_mag ** 4)
         p[0] = p_mag * (r[0] / r_mag) * (5 * (r[2]**2 / r_mag**2) - 1)
         p[1] = p_mag * (r[1] / r_mag) * (5 * (r[2]**2 / r_mag**2) - 1)
@@ -60,7 +60,7 @@ def simulate_launch(eccentricity: float,
                     max_step=1
                     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     
-    mu = const.mu_EARTH
+    mu = const.mu
 
     # Calculate the position vector in the perifocal frame
     r_perifocal_init, v_perifocal_init = pt.get_perifocal_vectors(eccentricity, true_anomaly, specific_angular_momentum)

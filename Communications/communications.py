@@ -17,11 +17,41 @@ class GroundStation:
         self.solution_ys = [[[]]]
 
     def send_solution(self):
-        self.target_orbits = self.generate_three_random_orbits()
+        self.target_orbits = self.generate_three_orbits()
         
         self.generate_solution_arrays()
 
         return self.solution_ts, self.solution_ys
+
+    def generate_three_orbits(self):
+
+        target_orbit_A = {
+            "altitude_of_perigee": 12304.08,
+            "altitude_of_apogee": 13587.16,
+            "inclination_angle": 15.82,
+            "raan": 18.68,
+            "argument_of_perigee": 26.62
+        }
+
+        target_orbit_B = {
+            "altitude_of_perigee": 13156.94,
+            "altitude_of_apogee": 22639.16,
+            "inclination_angle": 33.40,
+            "raan": 149.58,
+            "argument_of_perigee": -146.11
+        }
+
+        target_orbit_C = {
+            "altitude_of_perigee": 6681.02,
+            "altitude_of_apogee": 36670.48,
+            "inclination_angle": 39.84,
+            "raan": 21.61,
+            "argument_of_perigee": 25.99
+        }
+
+        random_orbits = [target_orbit_A, target_orbit_B, target_orbit_C]
+
+        return random_orbits
 
     def generate_three_random_orbits(self):
         orbit_types = {
@@ -118,7 +148,7 @@ class GroundStation:
         reordered_satellite_array = [satellite_array[i] for i in best_combo]
         
         print("Best Manoeuvre:", min(total_delta_vs))
-        print("Optimal Order of Indices:", best_combo)
+        print("Optimal Order of Orbits:", best_combo)
 
         self.solution_ts, self.solution_ys = ms.simulate_manoeuvres(reordered_satellite_array)
 
@@ -160,7 +190,6 @@ class Communications:
 
     def select_best_station(self, satellite_position):
         x, y, z = satellite_position
-        print(f"Satellite position in km: X = {x:.2f} km, Y = {y:.2f} km, Z = {z:.2f} km")
 
         gs = GroundStation(self.params, self.AOCS)
         
