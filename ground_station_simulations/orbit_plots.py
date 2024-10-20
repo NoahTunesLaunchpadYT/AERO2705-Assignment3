@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import urllib.request
 from matplotlib import cm
-import definitions as d
+import ground_station_simulations.definitions as d
 
 # Constants
 EQUATORIAL_RADIUS = d.EQUATORIAL_RADIUS

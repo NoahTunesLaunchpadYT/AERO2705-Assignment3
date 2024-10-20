@@ -5,8 +5,8 @@
 # The file includes functions to run orbital simulations with or without oblateness effects and 
 # to analyze orbital parameters based on TLE data.
 
-import orbit as o
-import definitions
+import ground_station_simulations.orbit as o
+import ground_station_simulations.definitions
 
 def investigate_orbit_simulations() -> None:
     """

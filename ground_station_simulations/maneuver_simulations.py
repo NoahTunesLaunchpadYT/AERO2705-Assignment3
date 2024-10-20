@@ -4,11 +4,11 @@
 # Description: Performs simulations involving orbital transfers and plane-change maneuvers,
 # including Hohmann transfer and inclination adjustments between two orbits.
 
-import orbit as o
-import orbit_simulations as os
-import definitions as d
+import ground_station_simulations.orbit as o 
+import ground_station_simulations.orbit_simulations as os
+import ground_station_simulations.definitions as d
 import numpy as np
-import orbit_plots as op
+import ground_station_simulations.orbit_plots as op
 
 def find_best_angle(orbit, starting_orbit, target_orbit, ta_starting, ta_target, low=0.0, high=2*np.pi, tolerance=1e-6):
     """
@@ -169,7 +169,7 @@ def print_orbit_parameters(orbit, orbit_name):
     print(f"  RAAN                  : {raan:.2f} degrees")
     print(f"  Argument of perigee   : {argument_of_perigee:.2f} degrees")
 
-def investigate_maneuver(starting_params: dict = d.starting_params, target_params: dict = d.target_params, optimise: bool = True) -> None:
+def investigate_maneuver(starting_params: dict, target_params: dict, optimise: bool = True) -> None:
     """Investigate orbital maneuvers and calculate key parameters"""
 
     # Create instances of the OrbitalParameters class
@@ -250,17 +250,77 @@ def investigate_maneuver(starting_params: dict = d.starting_params, target_param
     print_orbit_parameters(target_orbit, "Target Orbit")
 
     # Plot the transfer maneuver
-    op.plot_transfer_maneuver(starting_orbit, transfer_orbit, target_orbit)
+    # op.plot_transfer_maneuver(starting_orbit, transfer_orbit, target_orbit)
 
-    return
+    return delta_v_1 + delta_v_2
 
 def investigate_maneuvers() -> None:
     investigate_maneuver(d.starting_params, d.target_params, False)
     investigate_maneuver(d.starting_params, d.target_params, True)
 
+
+def simulate_manoeuvres(param_array):
+    orbits = []
+    spatial_solution_array = []
+    temporal_solution_array = []
+
+    starting_params = param_array[0]
+    current_orbit = o.Orbit()
+    current_orbit.parse_dictionary(starting_params)
+    current_orbit.calculate_orbital_constants_from_dict()  # This calls calculate_initial_state
+
+    current_orbit.initial_true_anomaly = 0
+    current_orbit.calculate_initial_state()        
+
+    for i in range(1, len(param_array)):
+        target_params = param_array[i]
+
+        # Create an instance for the target orbit
+        target_orbit = o.Orbit()
+        target_orbit.parse_dictionary(target_params)
+        target_orbit.calculate_orbital_constants_from_dict()  # This calls calculate_initial_state
+
+        # Generate the Hohmann transfer parameters between current orbit and the next target orbit
+        hohmann_params, ta_starting_orbit_at_node_line, ta_target_orbit_at_node_line = generate_hohmann_transfer(
+            current_orbit, target_orbit
+        )
+
+        current_orbit.final_true_anomaly = ta_starting_orbit_at_node_line
+        target_orbit.initial_true_anomaly = ta_target_orbit_at_node_line
+        target_orbit.calculate_initial_state()        
+
+        orbits.append(current_orbit)
+
+        # Create and set up the transfer orbit
+        transfer_orbit = o.Orbit()
+        transfer_orbit.parse_dictionary(hohmann_params)
+        transfer_orbit.initial_true_anomaly = 0
+        transfer_orbit.final_true_anomaly = np.pi
+        transfer_orbit.calculate_orbital_constants_from_dict()  # This calls calculate_initial_state
+
+        orbits.append(transfer_orbit)
+
+        current_orbit = target_orbit
+
+        # If it's the last iteration, append the final target orbit
+        if i == len(param_array) - 1:
+            orbits.append(current_orbit)
+
+    for orbit in orbits:
+        temporal_solution, spatial_solution = orbit.generate_orbit_path()
+
+        temporal_solution_np = np.array(temporal_solution)
+        spatial_solution_np = np.array(spatial_solution)
+
+        temporal_solution_array.append(temporal_solution_np)
+        spatial_solution_array.append(spatial_solution_np)
+
+    return temporal_solution_array, spatial_solution_array
+
+
 def main() -> None:
-    investigate_maneuvers()
-    return 
+    dv, sequence = investigate_maneuvers()
+    return dv, sequence
 
 if __name__ == "__main__":
     main()

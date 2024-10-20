@@ -7,12 +7,10 @@
 
 import numpy as np
 from scipy.integrate import solve_ivp
-import orbit_plots as op
-import linear_algebra as la
-import definitions as d
-import sidereal as s
-
-import definitions
+import ground_station_simulations.orbit_plots as op
+import ground_station_simulations.linear_algebra as la
+import ground_station_simulations.definitions as d
+import ground_station_simulations.sidereal as s
 
 class Orbit:
     """
@@ -97,6 +95,7 @@ class Orbit:
 
         # Orbiter Parameters
         self.initial_mean_anomaly = 0 # Radians
+        self.final_true_anomaly = 0 # Radians
         self.initial_true_anomaly = None # Radians
         self.initial_displacement = None
         self.initial_velocity = None
@@ -619,7 +618,9 @@ class Orbit:
         """
         Calculates the inital state
         """        
-        self.calculate_initial_true_anomaly()
+        if self.initial_true_anomaly == None:
+            self.calculate_initial_true_anomaly()    
+        
         self.calculate_initial_displacement()
         self.calculate_initial_velocity()
 
@@ -640,7 +641,7 @@ class Orbit:
         else:
             self.simulation_duration = duration
 
-        self.generate_orbit_path(oblateness_effects)
+        self.generate_orbit_path()
 
         ax = op.new_figure()
         op.plot_eci_orbit_segments(ax, [self.solution_y], 0.8),
@@ -648,19 +649,40 @@ class Orbit:
 
         op.plot_ground_track(self.solution_y, self.solution_t, self.greenwhich_sidereal_time, stationary_ground)
     
-    def sphere_ode_func(self, t: float, y_n: np.ndarray) -> np.ndarray:
+    def true_anomaly_event(self, t, y_n):
         """
-        Differential equation for the orbital dynamics around a spherical planet
+        Event function to stop integration when the true anomaly reaches a specified value.
 
         Args:
-            t (float): _description_
-            y_n (np.ndarray): _description_
+            t (float): Time
+            y_n (np.ndarray): State vector
 
         Returns:
-            np.ndarray: _description_
+            float: Difference between current true anomaly and target true anomaly
+        """
+        current_true_anomaly = y_n[6]  # The true anomaly is stored in the last position of y_n
+        final_true_anomaly = self.final_true_anomaly  # Assuming you set this beforehand
+
+        return current_true_anomaly - final_true_anomaly
+
+    # Set event properties outside the function, right after defining it
+    true_anomaly_event.terminal = True  # Stop when event is triggered
+    true_anomaly_event.direction = 1  # Only trigger when increasing
+
+    def sphere_ode_func_with_true_anomaly(self, t: float, y_n: np.ndarray) -> np.ndarray:
+        """
+        Differential equation for orbital dynamics, modified to include true anomaly tracking.
+
+        Args:
+            t (float): Time
+            y_n (np.ndarray): State vector containing [x, y, z, vx, vy, vz, true_anomaly]
+
+        Returns:
+            np.ndarray: Derivatives of [x, y, z, vx, vy, vz, true_anomaly]
         """        
         mu = self.MU
-        
+
+        # Position and velocity components
         r = np.sqrt(y_n[0]**2 + y_n[1]**2 + y_n[2]**2)
 
         x_dot = y_n[3]
@@ -670,67 +692,41 @@ class Orbit:
         y_ddot = -mu / r**3 * y_n[1]
         z_ddot = -mu / r**3 * y_n[2]
 
-        return np.array([x_dot, y_dot, z_dot, x_ddot, y_ddot, z_ddot])
+        # True anomaly calculation
+        h = np.cross(y_n[0:3], y_n[3:6])  # Angular momentum vector
+        h_norm = np.linalg.norm(h)  # Magnitude of angular momentum
+        true_anomaly_dot = h_norm / r**2  # Rate of change of true anomaly
 
-    def oblate_ode_func(self, t: float, y_n: np.ndarray) -> np.ndarray:
-        """
-        Differential equation for the orbital dynamics around a spherical planet
+        # Return derivatives including true anomaly dot
+        return np.array([x_dot, y_dot, z_dot, x_ddot, y_ddot, z_ddot, true_anomaly_dot])
 
-        Args:
-            t (float): _description_
-            y_n (np.ndarray): _description_
-
-        Returns:
-            np.ndarray: _description_
-        """        
-        mu = self.MU
-        j2 = self.J2
-        R = self.EQUATORIAL_RADIUS
-        
-        # Extract state vectors and finding their magnitudes
-        r = y_n[0:3]
-        x = r[0]
-        y = r[1]
-        z = r[2]
-        
-        v = y_n[3:6]
-
-        r_mag = np.linalg.norm(r)
-
-        r_dot = v
-
-        p = (3/2) * ((j2 * mu * R ** 2) / (r_mag ** 4)) * np.array([
-            (x / r_mag) * (5 * (z ** 2) / (r_mag ** 2) - 1),
-            (y / r_mag) * (5 * (z ** 2) / (r_mag ** 2) - 1),
-            (z / r_mag) * (5 * (z ** 2) / (r_mag ** 2) - 3)
-        ])
-
-        # Two body equation
-        v_dot = (-mu/(r_mag ** 3)) * r + p
-
-        return np.concatenate((r_dot, v_dot))
-
-    def generate_orbit_path(self, oblateness_effects: bool = None):
+    def generate_orbit_path(self):
         r = self.initial_displacement
         v = self.initial_velocity
-        T = self.simulation_duration
         resolution = self.SIMULATION_RESOLUTION
 
-        if oblateness_effects:
-            ode_func = self.oblate_ode_func
-        else:
-            ode_func = self.sphere_ode_func
+        # Set the target true anomaly (in radians)
+        self.target_true_anomaly = self.final_true_anomaly
 
-        y0 = np.concatenate((r, v))
-        t_span = (0, T)
+        ode_func = self.sphere_ode_func_with_true_anomaly
 
-        solution = solve_ivp(ode_func, 
-                             t_span, 
-                             y0,
-                             max_step=50)
-                
+        # Initial state vector including the true anomaly (assumed to start at 0)
+        y0 = np.concatenate((r, v, [0]))  # [x, y, z, vx, vy, vz, true_anomaly]
+        t_span = (0, 1e5)  # The time span is arbitrary, we'll stop by true anomaly
+
+        # Solve the ODE with the true anomaly event
+        solution = solve_ivp(
+            ode_func, 
+            t_span, 
+            y0, 
+            max_step=50, 
+            events=self.true_anomaly_event  # Event to stop when true anomaly is reached
+        )
+
         self.solution_t = solution.t  # Time array from the solution
         self.solution_y = solution.y  # State vector array from the solution
+
+        return solution.t, solution.y
 
     def __repr__(self):
         """String representation of the orbital parameters."""
