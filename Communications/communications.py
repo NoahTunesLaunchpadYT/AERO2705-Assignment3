@@ -54,8 +54,8 @@ class GroundStation:
             inclination = random.uniform(10, 50)
             arg_of_perigee = random.uniform(10, 50)
             generated_orbit = {
-                "altitude_of_perigee": perigee - const.R_EARTH,
-                "altitude_of_apogee": apogee - const.R_EARTH,
+                "altitude_of_perigee": perigee - const.R_E,
+                "altitude_of_apogee": apogee - const.R_E,
                 "inclination_angle": inclination,
                 "raan": RAAN,
                 "argument_of_perigee": arg_of_perigee
