@@ -258,14 +258,13 @@ class SatellitePath:
 
             if sequence_type == "hohmann-like":
                 self.generate_hohman_like_transfer(starting_orbit, target_orbit)
-                
-                print("Hohmann transfer delta-V:")
-                print(self.dv)
-
             elif sequence_type == "circularising":
                 self.generate_circularising_transfer(starting_orbit, target_orbit)
             elif sequence_type == "lambert":
                 self.generate_lambert_transfer(starting_orbit, target_orbit)
+        
+        print("Delta-V:")
+        print(self.dv)
 
     def ta_at_intersection_line(self, node_line: np.ndarray, rotation_matrix: np.ndarray) -> float:
         node_line_in_perifocal = np.dot(np.linalg.inv(rotation_matrix), node_line)
