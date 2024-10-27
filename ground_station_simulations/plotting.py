@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import urllib.request
 from matplotlib import cm
-import ground_station_simulations.definitions as d
+import definitions as d
 
 # Constants
 EQUATORIAL_RADIUS = d.EQUATORIAL_RADIUS
@@ -40,7 +40,7 @@ def generate_orbit_coordinates(orbit, num_points=1000, ta_start=0, ta_end=2 * np
 
     return np.array(x_coords), np.array(y_coords), np.array(z_coords)
 
-def plot_eci_orbit_segments(ax, maneuver_segments, color_offset=0, base_label="Orbit", Earth: bool = True, label_ends=True):
+def plot_path(ax, path, color_offset=0, base_label="Orbit", Earth: bool = True, label_ends=True):
     """
     Plot the orbit in 3D using the ECI coordinates for multiple maneuver segments.
     Each segment is plotted in a different color. The start and end points of the first and last segments 
@@ -54,6 +54,7 @@ def plot_eci_orbit_segments(ax, maneuver_segments, color_offset=0, base_label="O
         Earth (bool): Whether or not to plot the Earth in the background.
     """
     R = EQUATORIAL_RADIUS
+    maneuver_segments = path.solution_array_segments
     num_segments = len(maneuver_segments)
     colors = cm.jet(np.linspace(color_offset, 1 + color_offset, num_segments))
 
@@ -207,9 +208,6 @@ def plot_transfer_maneuver(starting_orbit, transfer_orbit, target_orbit):
                 y_coords.append(r_eci[1])
                 z_coords.append(r_eci[2])
 
-            # print(orbit.get_radius(2.3543809297189533))
-            # print(orbit.get_radius(np.pi))
-            
             return np.array(x_coords), np.array(y_coords), np.array(z_coords)
 
         # Step 1: Plot the full period for the starting orbit

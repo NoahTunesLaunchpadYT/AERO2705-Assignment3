@@ -7,10 +7,10 @@
 
 import numpy as np
 from scipy.integrate import solve_ivp
-import ground_station_simulations.orbit_plots as op
-import ground_station_simulations.linear_algebra as la
-import ground_station_simulations.definitions as d
-import ground_station_simulations.sidereal as s
+import linear_algebra as la
+import definitions as d
+
+import definitions
 
 class Orbit:
     """
@@ -66,9 +66,6 @@ class Orbit:
 
     MU = d.MU  # Gravitational constant (km^3/s^2)
     EQUATORIAL_RADIUS = d.EQUATORIAL_RADIUS # Earth’s equatorial radius (km)
-    ANGULAR_TOLERANCE = 1e-10  # radians
-    J2 = 1.08263e-3 # Earth's oblateness constant
-    SIMULATION_RESOLUTION = 1000 # Resolution for numerical simulations
 
     def __init__(self) -> None:
         """
@@ -84,57 +81,26 @@ class Orbit:
         self.radius_of_apogee = None
         self.altitude_of_perigee = None
         self.altitude_of_apogee = None
-        self.velocity_at_perigee = None
-        self.velocity_at_apogee = None
-        self.mean_motion = None
         self.inclination_angle = None 
         self.raan = None 
         self.argument_of_perigee = None 
         self.normal = None
+
+        self.velocity_at_perigee = None
+        self.velocity_at_apogee = None
+        self.mean_motion = None
         self.greenwhich_sidereal_time = None
 
         # Orbiter Parameters
         self.initial_mean_anomaly = 0 # Radians
-        self.final_true_anomaly = 0 # Radians
         self.initial_true_anomaly = None # Radians
         self.initial_displacement = None
         self.initial_velocity = None
 
-        # Simulation Variables
-        self.simulation_duration = None
-        self.solution_t = None # Time array from the solution
-        self.solution_y = None
-
         # Rotations
         self.current_rotation = 0.0  # Starting with no rotation
   
-    def parse_tle(self, tle: str) -> None:
-        """
-        Parse Two-Line Element (TLE) data to extract orbital parameters.
-
-        Args:
-            tle (str): A string containing two-line element data.
-
-        This method extracts the inclination, RAAN, eccentricity, argument of perigee, 
-        mean anomaly, and mean motion from the TLE.
-        see https://en.wikipedia.org/wiki/Two-line_element_set
-        """        
-        # Split TLE into two lines
-        lines = tle.strip().split("\n")
-        line1 = lines[0]
-        line2 = lines[1]
-
-        # Extracting relevant fields from line 2
-        self.inclination_angle = np.radians(float(line2[8:16].strip())) # Inclination in degrees
-        self.raan = np.radians(float(line2[17:25].strip()))  # Right Ascension of Ascending Node (RAAN)
-        self.eccentricity = float(f"0.{line2[26:33].strip()}")  # Eccentricity (decimal point assumed)
-        self.argument_of_perigee = np.radians(float(line2[34:42].strip()))  # Argument of perigee in degrees
-        self.initial_mean_anomaly = np.radians(float(line2[43:51].strip())) # Mean anomaly in rad
-        self.mean_motion = float(line2[52:63].strip())  # Mean motion (revolutions per day)
-
-        self.greenwhich_sidereal_time = s.calculate_gst_from_tle(line1)
-
-    def parse_dictionary(self, params: dict) -> None:
+    def calculate_parameters_from_dictionary(self, params: dict) -> None:
         """
         Parse a dictionary of orbital parameters and set the corresponding attributes.
 
@@ -147,7 +113,139 @@ class Orbit:
         self.inclination_angle = np.radians(params["inclination_angle"])
         self.raan = np.radians(params["raan"])
         self.argument_of_perigee = np.radians(params["argument_of_perigee"])
+        self.initial_true_anomaly = np.radians(params["initial_true_anomaly"])
+        
+        # Calculating parameters
+        self.calculate_radius_of_perigee_from_altitude()
+        self.calculate_radius_of_apogee_from_altitude()
+        self.calculate_semi_major_axis_from_radii()
+        self.calculate_period_from_semi_major_axis()
+        self.calculate_eccentricity()
+        self.calculate_specific_angular_momentum()
+        self.calculate_specific_energy()
+        self.calculate_velocity_at_perigee()
+        self.calculate_velocity_at_apogee()
+        self.calculate_normal()
+        self.calculate_initial_displacement()
+        self.calculate_initial_velocity()
 
+    def calculate_initial_parameters_from_state_vector(self, state_vector) -> None:
+        # Obtain displacement and veloctiy
+        self.initial_displacement = state_vector[:3]
+        self.initial_velocity = state_vector[3:6]
+
+        # Calculate parameters directly from the state vector
+        self.calculate_specific_angular_momentum_from_state_vector()
+        self.calculate_specific_energy_from_state_vector()
+
+        # Use specific angular momentum to calculate eccentricity
+        self.calculate_eccentricity_from_angular_momentum()
+
+        # Calculate other orbital parameters using derived quantities
+        self.calculate_semi_major_axis_from_energy()
+        self.calculate_inclination_angle_from_state_vector()
+        self.calculate_raan_from_state_vector()
+        self.calculate_argument_of_perigee_from_state_vector()
+
+        # Calculate the initial true anomaly using eccentricity, angular momentum, and radius
+        self.calculate_true_anomaly_from_e_h_r()
+
+        # Calculate the remaining parameters
+        self.calculate_radius_of_perigee_from_eccentricity()
+        self.calculate_radius_of_apogee_from_eccentricity()
+        self.calculate_altitude_of_perigee()
+        self.calculate_altitude_of_apogee()
+        self.calculate_velocity_at_perigee()
+        self.calculate_velocity_at_apogee()
+        self.calculate_normal()
+
+
+    def calculate_specific_angular_momentum_from_state_vector(self) -> None:
+        # Specific angular momentum h = r × v
+        r = self.initial_displacement
+        v = self.initial_velocity
+        self.specific_angular_momentum_vec = np.cross(r, v)
+        self.specific_angular_momentum = np.linalg.norm(np.cross(r, v))
+    
+    def calculate_specific_energy_from_state_vector(self) -> None:
+        # Specific orbital energy ε = v^2/2 - μ/r
+        r_norm = np.linalg.norm(self.initial_displacement)
+        v_norm = np.linalg.norm(self.initial_velocity)
+        self.specific_energy = (v_norm**2) / 2 - self.MU / r_norm
+    
+    def calculate_eccentricity_from_angular_momentum(self) -> None:
+        # Eccentricity vector e = (v × h)/μ - r̂
+        r = self.initial_displacement
+        v = self.initial_velocity
+        h = self.specific_angular_momentum_vec
+        e_vec = (np.cross(v, h) / self.MU) - (r / np.linalg.norm(r))
+        self.eccentricity = np.linalg.norm(e_vec)
+        self.eccentricity_vector = e_vec
+    
+    def calculate_semi_major_axis_from_energy(self) -> None:
+        # Semi-major axis a = -μ / (2ε)
+        self.semi_major_axis = -self.MU / (2 * self.specific_energy)
+    
+    def calculate_inclination_angle_from_state_vector(self) -> None:
+        # Inclination i = arccos(h_z / |h|)
+        h = self.specific_angular_momentum_vec
+        h_norm = np.linalg.norm(h)
+        self.inclination_angle = np.arccos(h[2] / h_norm)
+    
+    def calculate_raan_from_state_vector(self) -> None:
+        # RAAN Ω = arccos(n_x / |n|), adjust for quadrant
+        h = self.specific_angular_momentum_vec
+        k = np.array([0, 0, 1])  # Z-axis
+        n = np.cross(k, h)  # Node vector
+        n_norm = np.linalg.norm(n)
+        
+        if n_norm != 0:
+            self.raan = np.arccos(n[0] / n_norm)
+            if n[1] < 0:  # Adjust for quadrant
+                self.raan = 2 * np.pi - self.raan
+        else:
+            self.raan = 0  # For equatorial orbits
+    
+    def calculate_argument_of_perigee_from_state_vector(self) -> None:
+        # Argument of perigee ω = arccos(n · e / (|n| * |e|)), adjust for quadrant
+        k = np.array([0, 0, 1])
+        h = self.specific_angular_momentum_vec
+        n = np.cross(k, h)  # Node vector
+        n_norm = np.linalg.norm(n)
+        e = self.eccentricity_vector
+        e_norm = np.linalg.norm(e)
+        
+        if n_norm != 0 and e_norm != 0:
+            cos_omega = np.dot(n, e) / (n_norm * e_norm)
+            self.argument_of_perigee = np.arccos(np.clip(cos_omega, -1, 1))
+            if e[2] < 0:  # Adjust for quadrant
+                self.argument_of_perigee = 2 * np.pi - self.argument_of_perigee
+        else:
+            self.argument_of_perigee = 0  # Circular or equatorial orbit
+    
+    def calculate_true_anomaly_from_e_h_r(self) -> None:
+        # True anomaly θ = arccos(e · r / (|e| * |r|)), adjust for quadrant
+        r = self.initial_displacement
+        e = self.eccentricity_vector
+        r_norm = np.linalg.norm(r)
+        e_norm = np.linalg.norm(e)
+        
+        if e_norm != 0:
+            cos_theta = np.dot(e, r) / (e_norm * r_norm)
+            self.true_anomaly = np.arccos(np.clip(cos_theta, -1, 1))
+            if np.dot(r, self.initial_velocity) < 0:  # Adjust for quadrant
+                self.true_anomaly = 2 * np.pi - self.true_anomaly
+        else:
+            self.true_anomaly = 0  # Circular orbit
+    
+    def calculate_radius_of_perigee_from_eccentricity(self) -> None:
+        # Radius of perigee r_p = a * (1 - e)
+        self.radius_of_perigee = self.semi_major_axis * (1 - self.eccentricity)
+    
+    def calculate_radius_of_apogee_from_eccentricity(self) -> None:
+        # Radius of apogee r_a = a * (1 + e)
+        self.radius_of_apogee = self.semi_major_axis * (1 + self.eccentricity)
+    
     def calculate_period_from_mean_motion(self) -> None:
         """
         Calculate the orbital period in seconds based on the mean motion.
@@ -163,19 +261,6 @@ class Orbit:
         # Mean motion in radians/second
         mean_motion_rads = self.mean_motion * 2 * np.pi / 86400
         self.semi_major_axis = (self.MU / (mean_motion_rads**2))**(1/3)
-
-    def calculate_radius_of_perigee_from_eccentricity(self) -> None:
-        """
-        Calculate the radius of perigee (r_p) in kilometers,
-        based on the eccentricity and semi-major axis.
-        """
-        self.radius_of_perigee = self.semi_major_axis * (1 - self.eccentricity)
-
-    def calculate_radius_of_apogee_from_eccentricity(self) -> None:
-        """
-        Calculate the radius of apogee based on the eccentricity and semi-major axis.
-        """
-        self.radius_of_apogee = self.semi_major_axis * (1 + self.eccentricity)
 
     def calculate_velocity_at_perigee(self) -> float:
         """
@@ -215,29 +300,14 @@ class Orbit:
         """
         self.altitude_of_apogee = self.radius_of_apogee - self.EQUATORIAL_RADIUS
 
-    def calculate_orbital_constants_from_tle(self) -> None:
-        """
-        Calculate all relevant orbital constants based on extracted TLE data.
-        """
-        self.calculate_period_from_mean_motion()
-        self.calculate_semi_major_axis_from_mean_motion()
-        self.calculate_radius_of_perigee_from_eccentricity()
-        self.calculate_radius_of_apogee_from_eccentricity()
-        self.calculate_specific_angular_momentum()
-        self.calculate_specific_energy()
-        self.calculate_altitude_of_perigee()
-        self.calculate_altitude_of_apogee()
-        self.calculate_velocity_at_perigee()
-        self.calculate_velocity_at_apogee()
-
-    def calculate_radius_of_perigee(self) -> None:
+    def calculate_radius_of_perigee_from_altitude(self) -> None:
         """
         Calculate the radius of perigee based on the altitude of perigee 
         and Earth's equatorial radius.
         """
         self.radius_of_perigee = self.altitude_of_perigee + self.EQUATORIAL_RADIUS
 
-    def calculate_radius_of_apogee(self) -> None:
+    def calculate_radius_of_apogee_from_altitude(self) -> None:
         """
         Calculate the radius of apogee based on the altitude of apogee 
         and Earth's equatorial radius.
@@ -286,23 +356,6 @@ class Orbit:
 
         # Return the normal vector as a NumPy array
         self.normal = np.array([n_x, n_y, n_z])
-
-    def calculate_orbital_constants_from_dict(self) -> None:
-        """
-        Calculate all relevant orbital constants based on provided parameters.
-        This includes semi-major axis, eccentricity, angular momentum, period, and velocities.
-        """
-        self.calculate_radius_of_perigee()
-        self.calculate_radius_of_apogee()
-        self.calculate_semi_major_axis_from_radii()
-        self.calculate_period_from_semi_major_axis()
-        self.calculate_eccentricity()
-        self.calculate_specific_angular_momentum()
-        self.calculate_specific_energy()
-        self.calculate_velocity_at_perigee()
-        self.calculate_velocity_at_apogee()
-        self.calculate_normal()
-        self.calculate_initial_state()
 
     def rotate_velocity(self, target_theta: float):
         """
@@ -503,7 +556,7 @@ class Orbit:
                                                    np.sin(E / 2), 
                                                    np.sqrt(1 - e) * 
                                                    np.cos(E / 2))
-        
+
     def calculate_time_between(self, ta1: float, ta2: float) -> float:
         """
         Calculate the time between two true anomalies (ta1 and ta2) using Kepler's law.
@@ -539,7 +592,7 @@ class Orbit:
             dt += self.orbital_period
 
         return dt
-    
+
     def perifocal_to_geocentric_rotation(self) -> np.ndarray:
         """Create the rotation matrix from perifocal to geocentric equatorial frame using
         the orbital elements (RAAN, inclination, and argument of perigee)."""
@@ -613,121 +666,6 @@ class Orbit:
         # Transform to geocentric equatorial frame
         self.initial_velocity = np.dot(rotation_matrix, v_pf)
 
-    
-    def calculate_initial_state(self) -> None:
-        """
-        Calculates the inital state
-        """        
-        if self.initial_true_anomaly == None:
-            self.calculate_initial_true_anomaly()    
-        
-        self.calculate_initial_displacement()
-        self.calculate_initial_velocity()
-
-
-    def simulate_orbit(self, oblateness_effects: bool = None, duration: float = None, stationary_ground: bool = False):
-        """
-        Simulate the orbit using numerical integration (solve_ivp) and plot the ground track or 3D orbit.
-
-        Args:
-            oblateness_effects (bool): Whether to include Earth's J2 oblateness effects in the simulation.
-            duration (float): The duration of the simulation in seconds.
-            stationary_ground (bool): If True, plots the ground track without considering Earth's rotation.
-                                      If False, plots the ground track considering Earth's rotation.
-        """
-        
-        if duration is None:
-            self.simulation_duration = self.orbital_period
-        else:
-            self.simulation_duration = duration
-
-        self.generate_orbit_path()
-
-        ax = op.new_figure()
-        op.plot_eci_orbit_segments(ax, [self.solution_y], 0.8),
-        op.show(ax)
-
-        op.plot_ground_track(self.solution_y, self.solution_t, self.greenwhich_sidereal_time, stationary_ground)
-    
-    def true_anomaly_event(self, t, y_n):
-        """
-        Event function to stop integration when the true anomaly reaches a specified value.
-
-        Args:
-            t (float): Time
-            y_n (np.ndarray): State vector
-
-        Returns:
-            float: Difference between current true anomaly and target true anomaly
-        """
-        current_true_anomaly = y_n[6]  # The true anomaly is stored in the last position of y_n
-        final_true_anomaly = self.final_true_anomaly  # Assuming you set this beforehand
-
-        return current_true_anomaly - final_true_anomaly
-
-    # Set event properties outside the function, right after defining it
-    true_anomaly_event.terminal = True  # Stop when event is triggered
-    true_anomaly_event.direction = 1  # Only trigger when increasing
-
-    def sphere_ode_func_with_true_anomaly(self, t: float, y_n: np.ndarray) -> np.ndarray:
-        """
-        Differential equation for orbital dynamics, modified to include true anomaly tracking.
-
-        Args:
-            t (float): Time
-            y_n (np.ndarray): State vector containing [x, y, z, vx, vy, vz, true_anomaly]
-
-        Returns:
-            np.ndarray: Derivatives of [x, y, z, vx, vy, vz, true_anomaly]
-        """        
-        mu = self.MU
-
-        # Position and velocity components
-        r = np.sqrt(y_n[0]**2 + y_n[1]**2 + y_n[2]**2)
-
-        x_dot = y_n[3]
-        y_dot = y_n[4]
-        z_dot = y_n[5]
-        x_ddot = -mu / r**3 * y_n[0]
-        y_ddot = -mu / r**3 * y_n[1]
-        z_ddot = -mu / r**3 * y_n[2]
-
-        # True anomaly calculation
-        h = np.cross(y_n[0:3], y_n[3:6])  # Angular momentum vector
-        h_norm = np.linalg.norm(h)  # Magnitude of angular momentum
-        true_anomaly_dot = h_norm / r**2  # Rate of change of true anomaly
-
-        # Return derivatives including true anomaly dot
-        return np.array([x_dot, y_dot, z_dot, x_ddot, y_ddot, z_ddot, true_anomaly_dot])
-
-    def generate_orbit_path(self):
-        r = self.initial_displacement
-        v = self.initial_velocity
-        resolution = self.SIMULATION_RESOLUTION
-
-        # Set the target true anomaly (in radians)
-        self.target_true_anomaly = self.final_true_anomaly
-
-        ode_func = self.sphere_ode_func_with_true_anomaly
-
-        # Initial state vector including the true anomaly (assumed to start at 0)
-        y0 = np.concatenate((r, v, [0]))  # [x, y, z, vx, vy, vz, true_anomaly]
-        t_span = (0, 1e5)  # The time span is arbitrary, we'll stop by true anomaly
-
-        # Solve the ODE with the true anomaly event
-        solution = solve_ivp(
-            ode_func, 
-            t_span, 
-            y0, 
-            max_step=50, 
-            events=self.true_anomaly_event  # Event to stop when true anomaly is reached
-        )
-
-        self.solution_t = solution.t  # Time array from the solution
-        self.solution_y = solution.y  # State vector array from the solution
-
-        return solution.t, solution.y
-
     def __repr__(self):
         """String representation of the orbital parameters."""
         return (
@@ -751,21 +689,6 @@ class Orbit:
         )
 
 def main() -> None:
-
-    # Create an instance of the OrbitalParameters class
-    orbit = Orbit()
-
-    # Parse the TLE data
-    orbit.parse_tle(definitions.FLOCK_TLE)
-    orbit.calculate_orbital_constants_from_tle()
-
-    # Display the extracted information
-    print(orbit)
-
-    # Simulating
-    orbit.calculate_initial_state()
-    orbit.simulate_orbit(oblateness_effects = False)
-    orbit.simulate_orbit(oblateness_effects = True, duration = 7 * 24 * 60 * 60)
 
     return 
 
