@@ -1,11 +1,8 @@
 import math
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import constants as const
 import random
-import ground_station_simulations.maneuver_simulations as ms
-import ground_station_simulations.orbit_plots as op
+import ground_station_simulations.transfer_algorithms as ta
 
 class GroundStation:
     def __init__(self, params, AOCS):
@@ -19,7 +16,14 @@ class GroundStation:
     def send_solution(self):
         self.target_orbits = self.generate_three_orbits()
         
-        self.generate_solution_arrays()
+        orbit_list = [self.starting_orbit] + self.target_orbits
+        print(orbit_list)
+
+        path = ta.get_best_solution(orbit_list, "hohmann-like", True)
+        self.solution_ts = path.time_array_segments
+        self.solution_ys = path.solution_array_segments
+
+        print(self.solution_ys)
 
         return self.solution_ts, self.solution_ys
 
@@ -30,7 +34,8 @@ class GroundStation:
             "altitude_of_apogee": 13587.16,
             "inclination_angle": 15.82,
             "raan": 18.68,
-            "argument_of_perigee": 26.62
+            "argument_of_perigee": 26.62,
+            "initial_true_anomaly": 0
         }
 
         target_orbit_B = {
@@ -38,7 +43,8 @@ class GroundStation:
             "altitude_of_apogee": 22639.16,
             "inclination_angle": 33.40,
             "raan": 149.58,
-            "argument_of_perigee": -146.11
+            "argument_of_perigee": -146.11,
+            "initial_true_anomaly": 0
         }
 
         target_orbit_C = {
@@ -46,7 +52,8 @@ class GroundStation:
             "altitude_of_apogee": 36670.48,
             "inclination_angle": 39.84,
             "raan": 21.61,
-            "argument_of_perigee": 25.99
+            "argument_of_perigee": 25.99,
+            "initial_true_anomaly": 0
         }
 
         random_orbits = [target_orbit_A, target_orbit_B, target_orbit_C]
@@ -96,7 +103,8 @@ class GroundStation:
                 "altitude_of_apogee": apogee - const.R_E,
                 "inclination_angle": inclination,
                 "raan": RAAN,
-                "argument_of_perigee": arg_of_perigee
+                "argument_of_perigee": arg_of_perigee,
+                "initial_true_anomaly": 0
             }
             
             random_orbits.append(generated_orbit)
@@ -111,78 +119,11 @@ class GroundStation:
             "altitude_of_apogee": starting_orbit.alt_a,
             "inclination_angle": starting_orbit.i_deg,
             "raan": starting_orbit.RAAN_deg,
-            "argument_of_perigee": starting_orbit.arg_p_deg
+            "argument_of_perigee": starting_orbit.arg_p_deg,
+            "initial_true_anomaly": 0
         }
 
         return starting_orbit
-    
-    def generate_solution_arrays(self):
-        transfer_dvs = {}
-
-        satellite_array = [self.starting_orbit, 
-                           self.target_orbits[0], 
-                           self.target_orbits[1], 
-                           self.target_orbits[2]]
-    
-        # Find dv for each transfer manoeuvre
-        for i in satellite_array:
-            for j in satellite_array:
-                if i == j:
-                    continue
-                else: 
-                    dv = ms.investigate_maneuver(i, j, False)
-                    transfer_dvs[f'{i} + {j}'] = dv
-
-        # Generate all permutations of the four orbits (indices 1 to 4)
-        manoeuvre_combos = self.permute_orbits([0, 1, 2, 3])
-        print("\nPERMUTATIONS")
-        print(manoeuvre_combos)
-        print("\n")
-            
-        total_delta_vs = []
-        
-        for combo in manoeuvre_combos:
-            total_delta_v = sum(
-                transfer_dvs[f'{satellite_array[combo[i]]} + {satellite_array[combo[i+1]]}']
-                for i in range(len(combo) - 1)
-            )
-            total_delta_vs.append(total_delta_v)
-        
-        # Find the best manoeuvre (minimum delta_v)
-        best_manoeuvre_index = total_delta_vs.index(min(total_delta_vs))
-        best_combo = manoeuvre_combos[best_manoeuvre_index]
-
-        # Reorder the satellite array to match the best combo
-        reordered_satellite_array = [satellite_array[i] for i in best_combo]
-        
-        print("Best Manoeuvre:", min(total_delta_vs))
-        print("Optimal Order of Orbits:", best_combo)
-
-        self.solution_ts, self.solution_ys = ms.simulate_manoeuvres(reordered_satellite_array)
-
-    def permute_orbits(self, arr):
-        if len(arr) == 1:
-            return [arr]
-        
-        parking_orbit = arr[0]
-        remaining = arr[1:]
-        
-        result = []
-        for i in range(len(remaining)):
-            current = remaining[i]
-            rest = remaining[:i] + remaining[i+1:]
-            for p in self.permute_orbits([current] + rest):
-                result.append([parking_orbit] + p)
-        
-        return result
-
-    def plot_all_data(self, AOCS):
-        self.plot_path(AOCS)
-
-    def plot_path(self, AOCS):
-        ax = op.new_figure()
-        op.plot_eci_orbit_segments(ax, AOCS.solution_ys, color_offset=0, label_ends=False)
-        op.show(ax)
 
 class Communications:
     def __init__(self, params, AOCS):
@@ -198,6 +139,7 @@ class Communications:
 
     def select_best_station(self, satellite_position):
         x, y, z = satellite_position
+        print(f"Satellite position in km: X = {x:.2f} km, Y = {y:.2f} km, Z = {z:.2f} km")
 
         gs = GroundStation(self.params, self.AOCS)
         

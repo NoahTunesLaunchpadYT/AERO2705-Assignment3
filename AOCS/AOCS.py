@@ -31,6 +31,3 @@ class AOCS:
         self.solution_ts, self.solution_ys = self.communications.receive_solution()
         
         gs = self.communications.select_best_station(self.solution_ys[-1][0:3, -1])
-        gs.plot_all_data(self)
-
-    

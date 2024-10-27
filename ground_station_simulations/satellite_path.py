@@ -1,9 +1,7 @@
-import orbit as o
+from ground_station_simulations import orbit as o
 import numpy as np
 from scipy.integrate import solve_ivp
-import linear_algebra as la
-
-hello = "hello"
+from ground_station_simulations import linear_algebra as la
 
 class SatellitePath:
     """
@@ -222,6 +220,7 @@ class SatellitePath:
                 
                 # Try transfer manoeuvre
                 dvs = []
+
                 self.generate_hohman_like_transfer(starting_orbit, target_orbit)
                 dvs[0] = self.dv
 

@@ -1,8 +1,5 @@
-import plotting as pl
-import satellite_path as sp
-import linear_algebra as la
-import definitions as d
-import orbit as o
+from ground_station_simulations import plotting as pl
+from ground_station_simulations import satellite_path as sp
 
 def get_best_solution(orbits, sequence_type="All", plotting=True):
     

@@ -1,5 +1,5 @@
-import transfer_algorithms as al
-import plotting as pl
+from ground_station_simulations import transfer_algorithms as al
+from ground_station_simulations import plotting as pl
 
 starting_params = {
     "altitude_of_perigee": 500,

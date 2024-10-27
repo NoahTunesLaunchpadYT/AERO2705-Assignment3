@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import urllib.request
 from matplotlib import cm
-import definitions as d
+from ground_station_simulations import definitions as d
 
 # Constants
 EQUATORIAL_RADIUS = d.EQUATORIAL_RADIUS
@@ -56,6 +56,7 @@ def plot_path(ax, path, color_offset=0, base_label="Orbit", Earth: bool = True, 
     R = EQUATORIAL_RADIUS
     maneuver_segments = path.solution_array_segments
     num_segments = len(maneuver_segments)
+    print(num_segments)
     colors = cm.jet(np.linspace(color_offset, 1 + color_offset, num_segments))
 
     if Earth:

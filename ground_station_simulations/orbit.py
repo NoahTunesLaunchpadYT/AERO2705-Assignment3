@@ -7,10 +7,8 @@
 
 import numpy as np
 from scipy.integrate import solve_ivp
-import linear_algebra as la
-import definitions as d
-
-import definitions
+from ground_station_simulations import linear_algebra as la
+from ground_station_simulations import definitions as d
 
 class Orbit:
     """
