@@ -61,52 +61,52 @@ class GroundStation:
         return random_orbits
 
     def generate_three_random_orbits():
-    orbit_types = {
-        "LEO": [6378 + 160, 6378 + 2000],      # LEO: 160 km to 2000 km alt
-        "MEO": [6378 + 2000, 6378 + 35786],    # MEO: 2000 to 35786 km alt
-        "GEO": [6378 + 35786, 6378 + 35786],   # GEO: 35786 km alt
-        "HEO": [6378 + 1000, 6378 + 40270]     # HEO: 1000 to 40270 km alt (Maximum altitude before a satellite escapes Earth's gravity)
-    }
-    
-    orbit_choices = ["LEO", "MEO", "GEO", "HEO"]
-    weights = [(3790/4550), (139/4550), (565/4550), (56/4550)]  # 83.3% LEO, 3.05% MEO, 12.42% GEO, 1.23% HEO
-    random_orbits = []
-    
-    print("Please input an orbit type of: LEO, MEO, GEO, HEO. Empty or invalid inputs will generate random parameters.")
-    
-    for i in range(3):
-        input_type = input(f"What type of orbit will orbit {i+1} be? ").upper().strip()
-
-        if input_type not in orbit_types:
-            input_type = random.choices(orbit_choices, weights)[0]
-        lower_range, upper_range = orbit_types[input_type]
-
-        if input_type == "HEO":
-            perigee = random.uniform(6378 + 1000, 6378 + 2000)  # +1000km LEO range for perigee
-            apogee = random.uniform(6378 + 35786, 6378 + 40270)  # GEO or higher for apogee
-        else:
-            perigee = random.uniform(lower_range, upper_range)
-            apogee = random.uniform(lower_range, upper_range)
-        
-        if perigee > apogee:
-            perigee, apogee = apogee, perigee
-        
-        RAAN = random.uniform(0, 90)
-        inclination = random.uniform(0, 90)
-        arg_of_perigee = random.uniform(0, 90)
-        
-        generated_orbit = {
-            "altitude_of_perigee": perigee - 6378,
-            "altitude_of_apogee": apogee - 6378,
-            "inclination_angle": inclination,
-            "raan": RAAN,
-            "argument_of_perigee": arg_of_perigee,
-            "initial_true_anomaly": 0
+        orbit_types = {
+            "LEO": [6378 + 160, 6378 + 2000],      # LEO: 160 km to 2000 km alt
+            "MEO": [6378 + 2000, 6378 + 35786],    # MEO: 2000 to 35786 km alt
+            "GEO": [6378 + 35786, 6378 + 35786],   # GEO: 35786 km alt
+            "HEO": [6378 + 1000, 6378 + 40270]     # HEO: 1000 to 40270 km alt (Maximum altitude before a satellite escapes Earth's gravity)
         }
         
-        random_orbits.append(generated_orbit)
-
-    return random_orbits
+        orbit_choices = ["LEO", "MEO", "GEO", "HEO"]
+        weights = [(3790/4550), (139/4550), (565/4550), (56/4550)]  # 83.3% LEO, 3.05% MEO, 12.42% GEO, 1.23% HEO
+        random_orbits = []
+        
+        print("Please input an orbit type of: LEO, MEO, GEO, HEO. Empty or invalid inputs will generate random parameters.")
+        
+        for i in range(3):
+            input_type = input(f"What type of orbit will orbit {i+1} be? ").upper().strip()
+    
+            if input_type not in orbit_types:
+                input_type = random.choices(orbit_choices, weights)[0]
+            lower_range, upper_range = orbit_types[input_type]
+    
+            if input_type == "HEO":
+                perigee = random.uniform(6378 + 1000, 6378 + 2000)  # +1000km LEO range for perigee
+                apogee = random.uniform(6378 + 35786, 6378 + 40270)  # GEO or higher for apogee
+            else:
+                perigee = random.uniform(lower_range, upper_range)
+                apogee = random.uniform(lower_range, upper_range)
+            
+            if perigee > apogee:
+                perigee, apogee = apogee, perigee
+            
+            RAAN = random.uniform(0, 90)
+            inclination = random.uniform(0, 90)
+            arg_of_perigee = random.uniform(0, 90)
+            
+            generated_orbit = {
+                "altitude_of_perigee": perigee - 6378,
+                "altitude_of_apogee": apogee - 6378,
+                "inclination_angle": inclination,
+                "raan": RAAN,
+                "argument_of_perigee": arg_of_perigee,
+                "initial_true_anomaly": 0
+            }
+            
+            random_orbits.append(generated_orbit)
+    
+        return random_orbits
     
     def get_starting_orbit(self):
         starting_orbit = self.AOCS.starting_orbit
