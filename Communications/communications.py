@@ -61,7 +61,7 @@ class GroundStation:
 
         return random_orbits
 
-    def generate_three_random_orbits():
+    def generate_three_random_orbits(self):
         orbit_types = {
             "LEO": [6378 + 160, 6378 + 2000],      # LEO: 160 km to 2000 km alt
             "MEO": [6378 + 2000, 6378 + 35786],    # MEO: 2000 to 35786 km alt
