@@ -6,7 +6,6 @@
 # with and without oblateness effects (J2 perturbation).
 
 import numpy as np
-from scipy.integrate import solve_ivp
 from ground_station_simulations import linear_algebra as la
 from ground_station_simulations import definitions as d
 
@@ -132,6 +131,9 @@ class Orbit:
         self.initial_displacement = state_vector[:3]
         self.initial_velocity = state_vector[3:6]
 
+        # print(self.initial_displacement)
+        # print(self.initial_velocity)
+
         # Calculate parameters directly from the state vector
         self.calculate_specific_angular_momentum_from_state_vector()
         self.calculate_specific_energy_from_state_vector()
@@ -156,7 +158,7 @@ class Orbit:
         self.calculate_velocity_at_perigee()
         self.calculate_velocity_at_apogee()
         self.calculate_normal()
-
+        self.calculate_period_from_semi_major_axis()
 
     def calculate_specific_angular_momentum_from_state_vector(self) -> None:
         # Specific angular momentum h = r × v
@@ -230,11 +232,11 @@ class Orbit:
         
         if e_norm != 0:
             cos_theta = np.dot(e, r) / (e_norm * r_norm)
-            self.true_anomaly = np.arccos(np.clip(cos_theta, -1, 1))
+            self.initial_true_anomaly = np.arccos(np.clip(cos_theta, -1, 1))
             if np.dot(r, self.initial_velocity) < 0:  # Adjust for quadrant
-                self.true_anomaly = 2 * np.pi - self.true_anomaly
+                self.initial_true_anomaly = 2 * np.pi - self.initial_true_anomaly
         else:
-            self.true_anomaly = 0  # Circular orbit
+            self.initial_true_anomaly = 0  # Circular orbit
     
     def calculate_radius_of_perigee_from_eccentricity(self) -> None:
         # Radius of perigee r_p = a * (1 - e)
@@ -467,6 +469,7 @@ class Orbit:
         """
         # Get the radius at the specified true anomaly using the get_radius function
         radius = self.get_radius(true_anomaly)
+        # print(f"Radius: {radius}")
 
         # Position vector in the perifocal frame
         r_pf = np.array([
@@ -475,9 +478,14 @@ class Orbit:
             0  # Z-component is 0 in the perifocal frame
         ])
 
+        # print(f"Displacement in perifocal frame for ta = {true_anomaly}: {r_pf}")
+
         # Convert the position vector from the perifocal frame to the ECI frame
         rotation_matrix = self.perifocal_to_geocentric_rotation()
         r_eci = np.dot(rotation_matrix, r_pf)
+
+        # print(f"Displacement in eci frame for ta = {true_anomaly}: {r_eci}")
+
 
         return r_eci
 
@@ -663,6 +671,49 @@ class Orbit:
 
         # Transform to geocentric equatorial frame
         self.initial_velocity = np.dot(rotation_matrix, v_pf)
+
+    def calculate_time_between_anomalies(self, ta1: float, ta2: float) -> float:
+        """
+        Calculate the time required to move between two true anomalies, ta1 and ta2.
+        
+        Args:
+            ta1 (float): The initial true anomaly in radians.
+            ta2 (float): The final true anomaly in radians.
+
+        Returns:
+            float: Time in seconds between the two true anomalies.
+        """
+        # Ensure semi-major axis and eccentricity are defined
+        if self.semi_major_axis is None or self.eccentricity is None:
+            raise ValueError("Semi-major axis or eccentricity is not defined.")
+        
+        # Calculate mean motion (n) in radians per second
+        mean_motion = np.sqrt(self.MU / (self.semi_major_axis**3))
+
+        # Helper function to convert true anomaly to eccentric anomaly
+        def true_to_eccentric_anomaly(ta):
+            return 2 * np.arctan(np.sqrt((1 - self.eccentricity) / (1 + self.eccentricity)) * np.tan(ta / 2))
+
+        # Helper function to convert eccentric anomaly to mean anomaly
+        def eccentric_to_mean_anomaly(E):
+            return E - self.eccentricity * np.sin(E)
+
+        # Convert true anomalies to eccentric anomalies
+        E1 = true_to_eccentric_anomaly(ta1)
+        E2 = true_to_eccentric_anomaly(ta2)
+
+        # Convert eccentric anomalies to mean anomalies
+        M1 = eccentric_to_mean_anomaly(E1)
+        M2 = eccentric_to_mean_anomaly(E2)
+
+        # Calculate time difference between the two mean anomalies
+        delta_t = (M2 - M1) / mean_motion
+
+        # Ensure the time difference is positive
+        if delta_t < 0:
+            delta_t += self.orbital_period
+
+        return delta_t
 
     def __repr__(self):
         """String representation of the orbital parameters."""

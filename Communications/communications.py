@@ -14,46 +14,47 @@ class GroundStation:
         self.solution_ys = [[[]]]
 
     def send_solution(self):
-        self.target_orbits = self.generate_three_orbits()
+        self.target_orbits = self.generate_three_random_orbits()
         
-        orbit_list = [self.starting_orbit] + self.target_orbits
+        orbit_list = [self.generate_starting_orbit()] + self.target_orbits
         print(orbit_list)
+        
+        for i in range(0, len(orbit_list)):
+            print(orbit_list[i]["altitude_of_apogee"])
 
         path = ta.get_best_solution(orbit_list, "hohmann-like", True)
         self.solution_ts = path.time_array_segments
         self.solution_ys = path.solution_array_segments
-
-        print(self.solution_ys)
 
         return self.solution_ts, self.solution_ys
 
     def generate_three_orbits(self):
 
         target_orbit_A = {
-            "altitude_of_perigee": 12304.08,
-            "altitude_of_apogee": 13587.16,
-            "inclination_angle": 15.82,
-            "raan": 18.68,
-            "argument_of_perigee": 26.62,
+            "altitude_of_perigee": 3000,
+            "altitude_of_apogee": 3400,
+            "inclination_angle": 45,
+            "raan": -90,
+            "argument_of_perigee": -60,
             "initial_true_anomaly": 0
         }
 
         target_orbit_B = {
-            "altitude_of_perigee": 13156.94,
-            "altitude_of_apogee": 22639.16,
-            "inclination_angle": 33.40,
-            "raan": 149.58,
-            "argument_of_perigee": -146.11,
+            "altitude_of_perigee": 6000,
+            "altitude_of_apogee": 7000,
+            "inclination_angle": 500,
+            "raan": 15,
+            "argument_of_perigee": -10,
             "initial_true_anomaly": 0
         }
 
         target_orbit_C = {
-            "altitude_of_perigee": 6681.02,
-            "altitude_of_apogee": 36670.48,
-            "inclination_angle": 39.84,
-            "raan": 21.61,
-            "argument_of_perigee": 25.99,
-            "initial_true_anomaly": 0
+            "altitude_of_perigee": 2000,
+            "altitude_of_apogee": 20000,
+            "inclination_angle": -20,
+            "raan": 2,
+            "argument_of_perigee": 14,
+            "initial_true_anomaly": 40
         }
 
         random_orbits = [target_orbit_A, target_orbit_B, target_orbit_C]
@@ -112,6 +113,7 @@ class GroundStation:
         return random_orbits
     
     def get_starting_orbit(self):
+        
         starting_orbit = self.AOCS.starting_orbit
 
         starting_orbit = {
@@ -124,6 +126,19 @@ class GroundStation:
         }
 
         return starting_orbit
+    
+    def generate_starting_orbit(self):
+        
+        starting_params = {
+            "altitude_of_perigee": 500,
+            "altitude_of_apogee": 505,
+            "inclination_angle": 30,
+            "raan": 0,
+            "argument_of_perigee": 0,
+            "initial_true_anomaly": 0
+        }
+
+        return starting_params
 
 class Communications:
     def __init__(self, params, AOCS):

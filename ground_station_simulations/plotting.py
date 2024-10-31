@@ -10,9 +10,42 @@ from PIL import Image
 import urllib.request
 from matplotlib import cm
 from ground_station_simulations import definitions as d
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
 
 # Constants
 EQUATORIAL_RADIUS = d.EQUATORIAL_RADIUS
+
+class Arrow3D:
+    def __init__(self, start, end, color='blue', linewidth=1, mutation_scale=20):
+        self.start = np.array(start)
+        self.end = np.array(end)
+        self.color = color
+        self.linewidth = linewidth
+        self.mutation_scale = mutation_scale
+    
+    def draw(self, ax):
+        # Draw arrow line
+        ax.plot([self.start[0], self.end[0]],
+                [self.start[1], self.end[1]],
+                [self.start[2], self.end[2]],
+                color=self.color, linewidth=self.linewidth)
+
+        # Draw arrowhead
+        direction = self.end - self.start
+        direction = direction / np.linalg.norm(direction)  # Normalize the direction vector
+        head_length = self.mutation_scale * 0.05  # Adjust arrowhead size
+        head_width = head_length * 0.5  # Adjust arrowhead width
+
+        # Arrowhead vertices
+        arrowhead_vertices = [
+            self.end,
+            self.end - direction * head_length + np.cross(direction, [1, 0, 0]) * head_width,
+            self.end - direction * head_length + np.cross(direction, [0, 1, 0]) * head_width,
+        ]
+        
+        arrowhead_poly = Poly3DCollection([arrowhead_vertices], color=self.color)
+        ax.add_collection3d(arrowhead_poly)
 
 def generate_orbit_coordinates(orbit, num_points=1000, ta_start=0, ta_end=2 * np.pi):
     """
@@ -40,7 +73,7 @@ def generate_orbit_coordinates(orbit, num_points=1000, ta_start=0, ta_end=2 * np
 
     return np.array(x_coords), np.array(y_coords), np.array(z_coords)
 
-def plot_path(ax, path, color_offset=0, base_label="Orbit", Earth: bool = True, label_ends=True):
+def plot_path(ax, path, color_offset=0, base_label="Orbit", Earth: bool = True, label_ends=True, linestyle='-'):
     """
     Plot the orbit in 3D using the ECI coordinates for multiple maneuver segments.
     Each segment is plotted in a different color. The start and end points of the first and last segments 
@@ -56,7 +89,6 @@ def plot_path(ax, path, color_offset=0, base_label="Orbit", Earth: bool = True, 
     R = EQUATORIAL_RADIUS
     maneuver_segments = path.solution_array_segments
     num_segments = len(maneuver_segments)
-    print(num_segments)
     colors = cm.jet(np.linspace(color_offset, 1 + color_offset, num_segments))
 
     if Earth:
@@ -71,18 +103,18 @@ def plot_path(ax, path, color_offset=0, base_label="Orbit", Earth: bool = True, 
     for i, segment in enumerate(maneuver_segments):
         x, y, z = segment[0, :], segment[1, :], segment[2, :]
         label = f"{base_label} {i + 1}"
-        ax.plot(x, y, z, label=label, color=colors[i])
+        ax.plot(x, y, z, label=label, color=colors[i], linestyle=linestyle)
 
         if label_ends:
             # If it's the first segment, plot the start point
             if i == 0:
                 start_point = (x[0], y[0], z[0])
-                ax.scatter(*start_point, color=colors[i], s=100, marker='o', label=f"{base_label} start")
+                ax.scatter(*start_point, color=colors[i], s=100, marker='o', label=f"{base_label} start", linestyle=linestyle)
 
             # If it's the last segment, plot the end point
             if i == num_segments - 1:
                 end_point = (x[-1], y[-1], z[-1])
-                ax.scatter(*end_point, color=colors[i], s=100, marker='^', label=f"{base_label} end")
+                ax.scatter(*end_point, color=colors[i], s=100, marker='^', label=f"{base_label} end", linestyle=linestyle)
 
     ax.set_xlabel('X (km)')
     ax.set_ylabel('Y (km)')
@@ -91,7 +123,6 @@ def plot_path(ax, path, color_offset=0, base_label="Orbit", Earth: bool = True, 
     ax.set_xlim([-max_radius, max_radius])
     ax.set_ylim([-max_radius, max_radius])
     ax.set_zlim([-max_radius, max_radius])
-    ax.legend()
 
 def plot_current_position(ax, path, label, color, marker='o'):
     """
@@ -107,6 +138,27 @@ def plot_current_position(ax, path, label, color, marker='o'):
     current_position = path.state_array[:3, -1]  # Get the latest (x, y, z) position
     ax.scatter(current_position[0], current_position[1], current_position[2], 
                color=color, label=label, s=100, marker=marker)
+
+def plot_current_position(ax, vector, color, label, marker='o'):
+    x, y, z = (vector[0], vector[1], vector[2])
+
+    ax.scatter(x, y, z, 
+               color=color, label=label, s=100, marker=marker)
+
+def plot_unit_vector(ax, vector, color, label):
+    # Plot a vector from the origin (0, 0, 0) to the point (x, y, z)
+    vector = vector / np.linalg.norm(vector) * EQUATORIAL_RADIUS
+    arrow = Arrow3D((0,0,0), vector, 
+              color=color, linewidth=2, mutation_scale=20000)
+    arrow.draw(ax)
+
+def plot_state(ax, state, color):
+    r = state[0:3]
+    v = state[3:6]
+    vector = v / np.linalg.norm(v) * EQUATORIAL_RADIUS
+    arrow = Arrow3D(r, r + vector, 
+              color=color, linewidth=2, mutation_scale=20000)
+    arrow.draw(ax)
 
 def plot_ground_track(solution_y, solution_t, greenwich_sidereal_time, stationary_ground: bool = False):
     """
@@ -253,6 +305,35 @@ def plot_transfer_maneuver(starting_orbit, transfer_orbit, target_orbit):
         ax.grid(True)
         plt.show()
 
+def plot_orbit(ax, orbit, num_points=1000, label="Orbit"):
+    """
+    Plots an orbit on the provided 3D axis without showing it.
+
+    Args:
+        ax (matplotlib.axes._axes.Axes): The 3D axis on which to plot the orbit.
+        orbit: The orbit object with methods `get_radius_vector` to obtain (x, y, z) coordinates.
+        num_points (int): The number of points to use for the orbit plot.
+        label (str): The label for the orbit in the plot.
+    """
+    # Generate true anomaly points over a full orbit (0 to 2π)
+    true_anomalies = np.linspace(0, 2 * np.pi, num_points)
+    
+    # Calculate the position vectors for each true anomaly
+    x_vals = []
+    y_vals = []
+    z_vals = []
+    
+    for ta in true_anomalies:
+        # Get the position vector in geocentric coordinates
+        position_vector = orbit.get_radius_vector(ta)
+        
+        # Extract x, y, z from the position vector
+        x_vals.append(position_vector[0])
+        y_vals.append(position_vector[1])
+        z_vals.append(position_vector[2])
+    
+    # Plot the orbit in 3D
+    ax.plot(x_vals, y_vals, z_vals, label=label)
 
 def new_figure():
     """
@@ -272,5 +353,4 @@ def show(ax) -> None:
     Args:
         ax (matplotlib.axes._subplots.Axes3DSubplot): The axis of the plot.
     """
-    ax.legend()
     plt.show()

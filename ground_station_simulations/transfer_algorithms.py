@@ -1,23 +1,31 @@
-from ground_station_simulations import plotting as pl
 from ground_station_simulations import satellite_path as sp
+from ground_station_simulations import plotting as pl
 
-def get_best_solution(orbits, sequence_type="All", plotting=True):
-    
+def get_best_solution(orbits_params, sequence_type="All", plotting=False):
+
     if plotting:
-        # Start plotting
         ax = pl.new_figure()
+    else:
+        ax = None
 
     # Get best permutation of orbits of given sequence type
-    path = get_best_permutation(orbits, sequence_type, plotting)
-
+    path = get_best_permutation(orbits_params, sequence_type, plotting, ax)
+    
     if plotting:
-        # Show anything that was plotted
         pl.plot_path(ax, path)
+
+        for i, orbit_params in enumerate(orbits_params):
+            path = plot_target(orbit_params)
+
+            pl.plot_path(ax, path, color_offset=i/len(orbits_params), Earth=False, base_label=f"Target: {i}", label_ends=False, linestyle='--')
+
+        # Show anything that was plotted
+        ax.legend()
         pl.show(ax)
 
     return path
 
-def get_best_permutation(orbits_params, sequence_type, plotting):
+def get_best_permutation(orbits_params, sequence_type, plotting=False, ax=None):
     transfer_dvs = {}
 
     # Find the best path for each transfer manoeuvre
@@ -59,10 +67,7 @@ def get_best_permutation(orbits_params, sequence_type, plotting):
 
     best_path.generate_path(reordered_satellite_array,
                             sequence_type=sequence_type,
-                            plotting=plotting)
-
-
-
+                            plotting=plotting, ax=ax)
     return best_path
 
 def permute_orbits(arr):
@@ -80,3 +85,10 @@ def permute_orbits(arr):
             result.append([parking_orbit] + p)
     
     return result
+
+def plot_target(params):
+    path = sp.SatellitePath()
+    path.generate_path((params,), "coast", plotting=True)
+
+    return path
+
