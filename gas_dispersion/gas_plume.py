@@ -317,7 +317,6 @@ class GasPlumeSimulator:
             ax.plot(positions[:, i, 0], positions[:, i, 1], positions[:, i, 2], alpha=0.5)
 
         # Plot satellite position and orbit
-        # ax.plot(orbit_positions_eci[:, 0], orbit_positions_eci[:, 1], orbit_positions_eci[:, 2], 'b-', label='Satellite Orbit (ECI)')
         ax.scatter([satellite_position[0]], [satellite_position[1]], [satellite_position[2]], color='red', s=100, label='Satellite', marker='o')
 
         # Label axes for clarity

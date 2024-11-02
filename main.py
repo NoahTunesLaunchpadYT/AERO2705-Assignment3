@@ -18,10 +18,10 @@ def main():
     satellite.launch()
 
     # Satellite Testings
-    t.run_communication_test()
-    prop.test_propulsion_subsystem()
-    pwr.test_power_subsystem()
-    thr.test_thermal_subsystem()
+    # t.run_communication_test()
+    # prop.test_propulsion_subsystem()
+    # pwr.test_power_subsystem()
+    # thr.test_thermal_subsystem()
 
 if __name__ == "__main__":
     main()
