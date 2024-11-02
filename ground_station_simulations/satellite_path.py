@@ -242,6 +242,7 @@ class SatellitePath:
 
                 if sequence_type == "hohmann-like":
                     self.generate_hohman_like_transfer(starting_orbit, target_orbit, plotting=plotting, ax=ax)
+                    self.generate_phasing_manoeuvre(target_orbit, plotting=plotting, ax=ax)
                     
                 elif sequence_type == "circularising":
                     self.generate_circularising_transfer(starting_orbit, target_orbit, plotting=plotting, ax=ax)
@@ -261,6 +262,90 @@ class SatellitePath:
         node_line_in_perifocal = np.dot(np.linalg.inv(rotation_matrix), node_line)
         return np.arctan2(node_line_in_perifocal[1], node_line_in_perifocal[0])
 
+    
+    def semimajor_from_period(self, T: float) -> float:
+        """ Calculate the semi-major axis from the orbital period
+
+        Args:
+            T (float): Orbital period in seconds
+
+        Returns:
+            float: The semi-major axis in kilometers
+        """
+        a = ((T*np.sqrt(self.MU))/(2*np.pi))**(2/3)
+        return a
+
+    def generate_phasing_manoeuvre(self, target_orbit, plotting=False, ax=None):
+        print("\n\nPHASING!!\n\n")
+        last_state = self.solution_array_segments[-1][:, -1]
+
+        if ax:
+            pl.plot_state(ax, last_state, "pink")
+
+        current_orbit = o.Orbit()
+        current_orbit.calculate_initial_parameters_from_state_vector(last_state)
+        time_till_perigee = current_orbit.calculate_time_between_anomalies(
+            current_orbit.initial_true_anomaly, 0)
+        print(f"time till perigee {time_till_perigee}, orbital period: {target_orbit.orbital_period}")
+        #self.simulate_impulse(current_orbit.get_velocity(0))
+        self.simulate_coast(time_till_perigee)
+
+        last_state = self.solution_array_segments[-1][:, -1]
+        if ax:
+            pl.plot_current_position(ax, last_state, "green", "supposed perig")
+        perigee_time = self.time_array_segments[-1][-1]  
+        satellite_time = perigee_time % target_orbit.orbital_period
+        time_left = target_orbit.orbital_period - satellite_time
+
+        # T->a->r_a->   e->e_epsilon->velocity
+        a = self.semimajor_from_period(time_left) - self.EQUATORIAL_RADIUS
+        r_p = target_orbit.altitude_of_perigee
+        r_a = 2*a - r_p
+
+        while r_a < r_p:
+            time_left += target_orbit.orbital_period
+            a = self.semimajor_from_period(time_left) - self.EQUATORIAL_RADIUS
+            r_a = 2*a - r_p
+        
+        r = current_orbit.get_radius_vector(0)
+        radius = np.linalg.norm(r)
+
+        # Velocity vector at the starting point
+        v_starting = current_orbit.get_velocity(0)
+
+        # Calculate the specific angular momentum vector as the cross product of radius and velocity
+        h_vector = np.cross(r, v_starting)
+
+        # Compute the desired velocity magnitude from the vis viva equation
+        v_mag = np.sqrt(self.MU * (2 / radius - 1 / self.semimajor_from_period(time_left)))
+
+        v_direction = v_starting/np.linalg.norm(v_starting)
+
+        # Scale to the correct magnitude
+        v = v_mag * v_direction
+
+        state_vector = np.concatenate((r, v))
+
+        # Create phasing orbit object and calculate parameters
+        phasing_orbit = o.Orbit()
+        phasing_orbit.calculate_initial_parameters_from_state_vector(state_vector)
+
+        r = phasing_orbit.get_radius_vector(0)
+        
+        if ax:
+            pl.plot_current_position(ax, r, 'blue', "phasing orbit perigee")
+        
+        self.simulate_impulse(phasing_orbit.get_velocity(0))
+        # Simulate the phasing orbit and append results to solution and time arrays
+        self.simulate_coast(phasing_orbit.orbital_period)
+        self.simulate_impulse(target_orbit.get_velocity(0))
+        r = target_orbit.get_radius_vector(0)
+        if ax:
+            pl.plot_current_position(ax, r, 'pink', "target orbit perigee")
+        # Simulate the phasing orbit and append results to solution and time arrays
+        # self.simulate_coast(target_orbit.orbital_period)
+
+    
     def generate_hohman_like_transfer(self, starting_orbit, target_orbit, plotting=False, ax=None):        
         starting_orbit = starting_orbit
         # print(f"Starting argument of perigee: {starting_orbit.argument_of_perigee}")
