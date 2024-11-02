@@ -21,13 +21,13 @@ def get_best_solution(orbits_params, sequence_type="All", plotting=False):
     # Print delta-vs (scalars) with labels and timestamps
     print("  Delta-v Scalars (magnitude of delta-v for each maneuver):")
     for i, dv in enumerate(path.dvs):
-        maneuver_time = path.time_array_segments[i][0]
+        maneuver_time = path.time_array_segments[i+1][0]
         print(f"    Maneuver {i + 1} at t = {maneuver_time:.3f} s: {dv:.3f} km/s")
 
     # Print delta-v vectors with labels and timestamps
     print("\n  Delta-v Vectors (direction and magnitude of delta-v for each maneuver):")
     for i, dv_vec in enumerate(path.dv_vecs):
-        maneuver_time = path.time_array_segments[i][0]
+        maneuver_time = path.time_array_segments[i+1][0]
         print(f"    Maneuver {i + 1} at t = {maneuver_time:.3f} s: [{dv_vec[0]:.5f}, {dv_vec[1]:.5f}, {dv_vec[2]:.5f}] km/s")
         
     if plotting:
