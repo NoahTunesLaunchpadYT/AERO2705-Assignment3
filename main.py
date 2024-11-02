@@ -15,8 +15,8 @@ def main():
     satellite.launch()
 
     # Satellite Testings
-    t.run_communication_test()
-    p.test_propulsion_subsystem()
+    # t.run_communication_test()
+    # p.test_propulsion_subsystem()
 
     # Science testing
     # ai.test_absorption_interference()

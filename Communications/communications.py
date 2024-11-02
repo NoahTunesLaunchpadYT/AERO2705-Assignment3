@@ -72,7 +72,8 @@ class GroundStation:
         orbit_choices = ["LEO", "MEO", "GEO", "HEO"]
         weights = [(3790/4550), (139/4550), (565/4550), (56/4550)]  # 83.3% LEO, 3.05% MEO, 12.42% GEO, 1.23% HEO
         random_orbits = []
-        
+        input_types = []
+
         print("\nPlease input an orbit type of: LEO, MEO, GEO, HEO. Empty or invalid inputs will generate random parameters.")
         
         for i in range(3):
@@ -106,9 +107,11 @@ class GroundStation:
             }
             
             random_orbits.append(generated_orbit)
+            input_types.append(input_type)
+            
 
         for i in range(0, 3):
-            print(f"Orbit {i + 1} - Type: {input_type}")
+            print(f"Orbit {i + 1} - Type: {input_types[i]}")
 
         return random_orbits
     
