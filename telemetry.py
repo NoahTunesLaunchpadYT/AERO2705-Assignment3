@@ -113,9 +113,6 @@ class LinkBudget:
         return noise_power
 
     def snr(self, recieved_power, noise_power):
-        print(f"Recieved Power: {recieved_power:.2f} dB")
-        print(f"Noise Power: {noise_power:.2f} dB")
-        print(f"SNR: {recieved_power - noise_power:.2f} dB")
         return recieved_power - noise_power
     
     def propogation_delay(self, distance):

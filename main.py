@@ -18,9 +18,24 @@ def main():
     satellite.launch()
 
     # Satellite Testings
+    print("\n\n" + "="*47)
+    print("      Running communications test")
+    print("="*47 + "\n")
     t.run_communication_test()
+
+    print("\n\n" + "="*47)
+    print("      Running propulsion test")
+    print("="*47 + "\n")
     prop.test_propulsion_subsystem()
+
+    print("\n\n" + "="*47)
+    print("      Running power test")
+    print("="*47 + "\n")
     pwr.test_power_subsystem()
+
+    print("\n\n" + "="*47)
+    print("      Running thermal test")
+    print("="*47 + "\n")
     thr.test_thermal_subsystem()
 
 if __name__ == "__main__":
