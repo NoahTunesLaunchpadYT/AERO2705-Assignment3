@@ -174,7 +174,8 @@ class Orbit:
         self.specific_energy = (v_norm**2) / 2 - self.MU / r_norm
 
         if self.specific_energy >= 0:
-            self.specific_energy == -0.00001
+            print("Orbit sequence exceeds fuel capacity :(")
+            exit()
     
     def calculate_eccentricity_from_angular_momentum(self) -> None:
         # Eccentricity vector e = (v × h)/μ - r̂

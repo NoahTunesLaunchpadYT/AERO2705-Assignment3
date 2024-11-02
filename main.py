@@ -18,9 +18,5 @@ def main():
     t.run_communication_test()
     p.test_propulsion_subsystem()
 
-    # Science testing
-    # ai.test_absorption_interference()
-    # gd.test_gas_dispersion()
-
 if __name__ == "__main__":
     main()
