@@ -28,15 +28,15 @@ def get_best_solution(orbits_params, sequence_type="All", plotting=False):
     print("\n  Delta-v Vectors (direction and magnitude of delta-v for each maneuver):")
     for i, dv_vec in enumerate(path.dv_vecs):
         maneuver_time = path.time_array_segments[i][0]
-        print(f"    Maneuver {i + 1} at t = {maneuver_time:.3f} s: [{dv_vec[0]:.3f}, {dv_vec[1]:.3f}, {dv_vec[2]:.3f}] km/s")
+        print(f"    Maneuver {i + 1} at t = {maneuver_time:.3f} s: [{dv_vec[0]:.5f}, {dv_vec[1]:.5f}, {dv_vec[2]:.5f}] km/s")
         
     if plotting:
-        pl.plot_path(ax, path)
-
         for i, orbit_params in enumerate(orbits_params):
             target_path = plot_target(orbit_params)
 
             pl.plot_path(ax, target_path, color_offset=i/len(orbits_params), Earth=False, base_label=f"Target: {i}", label_ends=False, linestyle='--')
+
+        pl.plot_path(ax, path)
 
         # Show anything that was plotted
         ax.legend()

@@ -33,7 +33,7 @@ class SatellitePath:
     MU = d.MU                 # km^3/s^2
     EQUATORIAL_RADIUS = d.EQUATORIAL_RADIUS    # km
     J2 = 1.08263e-3
-    TIME_STEP = 100 # s
+    TIME_STEP = 1 # s
     MAX_ORBIT_DURATION = 1e7
 
     def __init__(self) -> None:
