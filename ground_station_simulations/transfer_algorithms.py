@@ -15,14 +15,14 @@ def get_best_solution(orbits_params, sequence_type="All", plotting=False):
         pl.plot_path(ax, path)
 
         for i, orbit_params in enumerate(orbits_params):
-            path = plot_target(orbit_params)
+            target_path = plot_target(orbit_params)
 
-            pl.plot_path(ax, path, color_offset=i/len(orbits_params), Earth=False, base_label=f"Target: {i}", label_ends=False, linestyle='--')
+            pl.plot_path(ax, target_path, color_offset=i/len(orbits_params), Earth=False, base_label=f"Target: {i}", label_ends=False, linestyle='--')
 
         # Show anything that was plotted
         ax.legend()
         pl.show(ax)
-
+    
     return path
 
 def get_best_permutation(orbits_params, sequence_type, plotting=False, ax=None):

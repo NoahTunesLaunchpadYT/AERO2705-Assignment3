@@ -12,6 +12,10 @@ class Satellite:
         # Initialize AOCS with parameters
         self.AOCS = a.AOCS(params)
 
+    def launch(self):
+        print("Running")
+        self.AOCS.run()
+
     def get_payload(self):
         return self.payload
 

@@ -10,8 +10,8 @@ class GroundStation:
         self.target_orbits = []
         self.AOCS = AOCS
         self.starting_orbit = self.get_starting_orbit()
-        self.solution_ts = [[]]
-        self.solution_ys = [[[]]]
+        self.solution_ts = None 
+        self.solution_ys = None
 
     def send_solution(self):
         self.target_orbits = self.generate_three_random_orbits()
@@ -23,6 +23,7 @@ class GroundStation:
             print(orbit_list[i]["altitude_of_apogee"])
 
         path = ta.get_best_solution(orbit_list, "hohmann-like", True)
+
         self.solution_ts = path.time_array_segments
         self.solution_ys = path.solution_array_segments
 

@@ -1,0 +1,51 @@
+Paramates needed:
+    gas_dispersion:
+        satellite position at any point
+        satellite velocity at any point
+        orbit in the ECI
+
+        //--For class initialisation--//
+        # Example parameters for hydrazine
+        N_molecules = 1000
+        dt = 1e-2
+        total_time = 2
+        P_tank = 1e6  # Pressure inside the tank in Pascals (e.g., 1 MPa)
+        P_space = 1e-3  # Pressure outside the tank in Pascals (near vacuum in space)
+        molar_mass_hydrazine = 32.05 / 1000  # Molar mass of hydrazine in kg/mol
+        V_ullage = 0.05  # Volume of the ullage space in m³
+        mass_gas = 0.5  # kg
+
+    gas_dispersion_2d:
+        //--For class initialisation--//
+        grid_size=50
+        time_steps=200, D=0.1
+        source_strength=100
+        dx=0.1
+
+    absorption_interference:
+        molar_absorptivity_hydrazine = 8.1e4
+        distance_km = 2
+
+        //--For class initialisation--//
+        # Gas absorption parameters, including Hydrazine and other interfering gases
+        gases = [
+            GasAbsorption(name="Hydrazine", peak_wavelength=9.7, peak_height=0.9),
+            GasAbsorption(name="Inteference A", peak_wavelength=10.1, peak_height=0.3),
+            GasAbsorption(name="Inteference B", peak_wavelength=10.6, peak_height=0.2)
+        ]
+
+        # List of standard deviations to simulate
+        std_devs = [0.05, 0.25, 0.5]
+
+Parameters produced:
+
+    gas_dispersion:
+        positions vectors of gas molecules
+        max distance of particle travelled
+        max width of plume
+    
+    gas_dispersion_2d:
+
+    absorption_interference:
+        concentration of hydrazine
+

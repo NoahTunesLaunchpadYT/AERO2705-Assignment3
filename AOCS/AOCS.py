@@ -1,5 +1,6 @@
 from Communications import communications as comms
 from Communications import orbits as o
+from gas_dispersion import payload as pld
 import constants as c
 
 class AOCS:
@@ -25,9 +26,13 @@ class AOCS:
         self.solution_ys = [[y]]
 
         self.communications = comms.Communications(params, self)
-        self.run()
+        self.payload = pld.Payload(params, self)
+
 
     def run(self):
+        print("Getting solution...")
         self.solution_ts, self.solution_ys = self.communications.receive_solution()
+        
+        self.payload.simulate_payload_on_path(self.solution_ts, self.solution_ys)
         
         gs = self.communications.select_best_station(self.solution_ys[-1][0:3, -1])
