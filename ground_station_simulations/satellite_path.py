@@ -119,6 +119,7 @@ class SatellitePath:
 
         # Define the time span and constant time steps for evaluation
         t_span = (starting_time, starting_time + duration)
+
         t_eval = np.arange(t_span[0], t_span[1], time_step)  # Constant time step
 
         # Solve the ODE for the coast phase with constant time steps
@@ -240,9 +241,15 @@ class SatellitePath:
                     elif best_orbit == 2:
                         self.generate_lambert_transfer(starting_orbit, target_orbit, plotting=plotting, ax=ax)
 
+                if sequence_type == "hohmann-like-with-phasing":
+                    self.generate_hohman_like_transfer(starting_orbit, target_orbit, plotting=plotting, ax=ax)
+                    state_before_phasing = self.solution_array_segments[-1][:, -1]
+                    
+                    self.generate_phasing_manoeuvre(target_orbit, plotting=plotting, ax=ax)
+                    self.solution_array_segments[-1][:, -1] = state_before_phasing
+
                 if sequence_type == "hohmann-like":
                     self.generate_hohman_like_transfer(starting_orbit, target_orbit, plotting=plotting, ax=ax)
-                    self.generate_phasing_manoeuvre(target_orbit, plotting=plotting, ax=ax)
                     
                 elif sequence_type == "circularising":
                     self.generate_circularising_transfer(starting_orbit, target_orbit, plotting=plotting, ax=ax)
@@ -276,23 +283,25 @@ class SatellitePath:
         return a
 
     def generate_phasing_manoeuvre(self, target_orbit, plotting=False, ax=None):
-        print("\n\nPHASING!!\n\n")
+        # print("\n\nPHASING!!\n\n")
         last_state = self.solution_array_segments[-1][:, -1]
 
-        if ax:
-            pl.plot_state(ax, last_state, "pink")
+        # if ax:
+        #     pl.plot_state(ax, last_state, "pink")
 
         current_orbit = o.Orbit()
         current_orbit.calculate_initial_parameters_from_state_vector(last_state)
         time_till_perigee = current_orbit.calculate_time_between_anomalies(
             current_orbit.initial_true_anomaly, 0)
-        print(f"time till perigee {time_till_perigee}, orbital period: {target_orbit.orbital_period}")
+        # print(f"time till perigee {time_till_perigee}, orbital period: {target_orbit.orbital_period}")
         #self.simulate_impulse(current_orbit.get_velocity(0))
         self.simulate_coast(time_till_perigee)
+        
+        # print(f"State before phasing: {self.solution_array_segments[-1][:, -1]}")
 
         last_state = self.solution_array_segments[-1][:, -1]
-        if ax:
-            pl.plot_current_position(ax, last_state, "green", "supposed perig")
+        # if ax:
+        #     pl.plot_current_position(ax, last_state, "green", "supposed perig")
         perigee_time = self.time_array_segments[-1][-1]  
         satellite_time = perigee_time % target_orbit.orbital_period
         time_left = target_orbit.orbital_period - satellite_time
@@ -332,16 +341,20 @@ class SatellitePath:
 
         r = phasing_orbit.get_radius_vector(0)
         
-        if ax:
-            pl.plot_current_position(ax, r, 'blue', "phasing orbit perigee")
+        # if ax:
+        #     pl.plot_current_position(ax, r, 'blue', "phasing orbit perigee")
         
+        temp = self.solution_array_segments[-1][:, -1]
         self.simulate_impulse(phasing_orbit.get_velocity(0))
-        # Simulate the phasing orbit and append results to solution and time arrays
         self.simulate_coast(phasing_orbit.orbital_period)
-        self.simulate_impulse(target_orbit.get_velocity(0))
+        self.simulate_impulse(current_orbit.get_velocity(0))
+        self.solution_array_segments[-1][:, -1] = temp
+
+        self.simulate_coast(current_orbit.orbital_period - time_till_perigee)
+
         r = target_orbit.get_radius_vector(0)
-        if ax:
-            pl.plot_current_position(ax, r, 'pink', "target orbit perigee")
+        # if ax:
+        #     pl.plot_current_position(ax, r, 'pink', "target orbit perigee")
         # Simulate the phasing orbit and append results to solution and time arrays
         # self.simulate_coast(target_orbit.orbital_period)
 

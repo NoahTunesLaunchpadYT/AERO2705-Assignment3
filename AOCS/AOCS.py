@@ -6,7 +6,7 @@ import numpy as np
 
 class AOCS:
     def __init__(self, params):
-        print("AOCS initialised")
+        print("- AOCS initialised")
         self.initial_alt_p = params['alt_p']
         self.initial_alt_a = params['alt_a']
         self.initial_inclination = params['i_deg']

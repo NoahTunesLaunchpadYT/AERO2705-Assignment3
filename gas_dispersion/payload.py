@@ -67,7 +67,7 @@ def extract_position_components(state_array) -> np.ndarray:
 
 class Payload:
     def __init__(self, params, satellite):
-        print("Payload initialised")
+        print("- Payload initialised")
         self.satellite = satellite
         
         # Parameters for hydrazine dispersal in space

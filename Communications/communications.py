@@ -6,7 +6,7 @@ import ground_station_simulations.transfer_search_algorithms as ta
 
 class GroundStation:
     def __init__(self, params, AOCS):
-        print("GroundStation initialised")
+        print("- GroundStation initialised")
 
         self.params = params
         self.target_orbits = []
@@ -21,6 +21,8 @@ class GroundStation:
         orbit_list = [self.generate_starting_orbit()] + self.target_orbits
         
         path = ta.get_best_solution(orbit_list, "hohmann-like", True)
+        other_path = ta.get_best_solution(orbit_list, "hohmann-like-with-phasing", True)
+
         self.solution_ts = path.time_array_segments
         self.solution_ys = path.solution_array_segments
 
@@ -140,7 +142,7 @@ class GroundStation:
 
 class Communications:
     def __init__(self, params, AOCS):
-        print("Communications initialised")
+        print("- Communications initialised")
         satellite_position = AOCS.solution_ys[0][0][0:3]
 
         self.params = params

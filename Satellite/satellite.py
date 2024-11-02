@@ -3,7 +3,7 @@ import AOCS.AOCS as a
 
 class Satellite:
     def __init__(self, file_name: str = "parameters.txt"):
-        print("Satellite initialised")
+        print("- Satellite initialised")
         # Construct the relative path to parameters.txt in the parent directory
         file_path = os.path.join(os.path.dirname(__file__), '..', file_name)
 
