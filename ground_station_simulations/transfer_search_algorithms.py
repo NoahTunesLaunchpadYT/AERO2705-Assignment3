@@ -39,7 +39,7 @@ def get_best_solution(orbits_params, sequence_type="All", plotting=False):
         pl.plot_path(ax, path)
 
         # Show anything that was plotted
-        # ax.legend()
+        ax.legend()
         pl.show(ax)
 
         # pl.animate_path(path, color_offset=0, base_label="Project Icarus", Earth=True, speed_factor=30)

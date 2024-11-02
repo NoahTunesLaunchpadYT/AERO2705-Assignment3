@@ -44,8 +44,8 @@ class Arrow3D:
             self.end - direction * head_length + np.cross(direction, [0, 1, 0]) * head_width,
         ]
         
-        arrowhead_poly = Poly3DCollection([arrowhead_vertices], color=self.color)
-        ax.add_collection3d(arrowhead_poly)
+        # arrowhead_poly = Poly3DCollection([arrowhead_vertices], color=self.color)
+        # ax.add_collection3d(arrowhead_poly)
 
 def generate_orbit_coordinates(orbit, num_points=1000, ta_start=0, ta_end=2 * np.pi):
     """
@@ -125,101 +125,101 @@ def plot_path(ax, path, color_offset=0, base_label="Orbit", Earth: bool = True, 
     ax.set_ylim([-max_radius * 2, max_radius * 2])
     ax.set_zlim([-max_radius * 2/1.2, max_radius * 2/1.2])
 
-# def animate_path(path, color_offset=0, base_label="Orbit", Earth=True, speed_factor=1, pause_duration=3):
-#     """
-#     Animate the orbit in 3D, plotting each point in each maneuver segment with a constant time step.
-#     Leaves a colored trail behind to indicate each segment, and clears all segments at each repeat.
+def animate_path(path, color_offset=0, base_label="Orbit", Earth=True, speed_factor=1, pause_duration=3):
+    """
+    Animate the orbit in 3D, plotting each point in each maneuver segment with a constant time step.
+    Leaves a colored trail behind to indicate each segment, and clears all segments at each repeat.
 
-#     Args:
-#         path: An object containing 'solution_array_segments'.
-#         color_offset (float): Offset for the color map to distinguish between different paths.
-#         base_label (str): Base label for the orbit segments.
-#         Earth (bool): Whether or not to plot the Earth in the background.
-#         speed_factor (int): Factor by which to speed up the animation (e.g., 10 for 10x faster).
-#         pause_duration (float): Duration to pause at the end of the animation (in seconds).
-#     """
-#     maneuver_segments = path.solution_array_segments
-#     num_segments = len(maneuver_segments)
-#     colors = cm.jet(np.linspace(color_offset, 1 + color_offset, num_segments))
+    Args:
+        path: An object containing 'solution_array_segments'.
+        color_offset (float): Offset for the color map to distinguish between different paths.
+        base_label (str): Base label for the orbit segments.
+        Earth (bool): Whether or not to plot the Earth in the background.
+        speed_factor (int): Factor by which to speed up the animation (e.g., 10 for 10x faster).
+        pause_duration (float): Duration to pause at the end of the animation (in seconds).
+    """
+    maneuver_segments = path.solution_array_segments
+    num_segments = len(maneuver_segments)
+    colors = cm.jet(np.linspace(color_offset, 1 + color_offset, num_segments))
 
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
 
-#     if Earth:
-#         # Plot the Earth as a sphere
-#         u, v = np.mgrid[0:2 * np.pi:100j, 0:np.pi:50j]
-#         earth_x = EQUATORIAL_RADIUS * np.cos(u) * np.sin(v)
-#         earth_y = EQUATORIAL_RADIUS * np.sin(u) * np.sin(v)
-#         earth_z = EQUATORIAL_RADIUS * np.cos(v)
-#         ax.plot_surface(earth_x, earth_y, earth_z, color='b', alpha=0.3, label="Earth")
+    if Earth:
+        # Plot the Earth as a sphere
+        u, v = np.mgrid[0:2 * np.pi:100j, 0:np.pi:50j]
+        earth_x = EQUATORIAL_RADIUS * np.cos(u) * np.sin(v)
+        earth_y = EQUATORIAL_RADIUS * np.sin(u) * np.sin(v)
+        earth_z = EQUATORIAL_RADIUS * np.cos(v)
+        ax.plot_surface(earth_x, earth_y, earth_z, color='b', alpha=0.3, label="Earth")
 
-#     # Initialize lines for each segment and a scatter point for the satellite
-#     lines = [ax.plot([], [], [], color=colors[i], linestyle='-')[0] for i in range(num_segments)]
-#     satellite_point, = ax.plot([], [], [], 'o', color='red', markersize=5)
+    # Initialize lines for each segment and a scatter point for the satellite
+    lines = [ax.plot([], [], [], color=colors[i], linestyle='-')[0] for i in range(num_segments)]
+    satellite_point, = ax.plot([], [], [], 'o', color='red', markersize=5)
 
-#     # Flatten the maneuver segments for easy indexing
-#     all_points = np.hstack(maneuver_segments)
-#     x_data, y_data, z_data = all_points[0], all_points[1], all_points[2]
+    # Flatten the maneuver segments for easy indexing
+    all_points = np.hstack(maneuver_segments)
+    x_data, y_data, z_data = all_points[0], all_points[1], all_points[2]
 
-#     # Set axis limits based on the maximum radius
-#     max_radius = np.max(np.linalg.norm(all_points[:3, :], axis=0))
-#     ax.set_xlim([-max_radius, max_radius])
-#     ax.set_ylim([-max_radius, max_radius])
-#     ax.set_zlim([-max_radius, max_radius])
-#     ax.set_xlabel('X (km)')
-#     ax.set_ylabel('Y (km)')
-#     ax.set_zlabel('Z (km)')
+    # Set axis limits based on the maximum radius
+    max_radius = np.max(np.linalg.norm(all_points[:3, :], axis=0))
+    ax.set_xlim([-max_radius, max_radius])
+    ax.set_ylim([-max_radius, max_radius])
+    ax.set_zlim([-max_radius, max_radius])
+    ax.set_xlabel('X (km)')
+    ax.set_ylabel('Y (km)')
+    ax.set_zlabel('Z (km)')
 
-#     # Set a constant frame interval based on the speed factor
-#     interval = 100 / speed_factor  # Adjust the interval in milliseconds
+    # Set a constant frame interval based on the speed factor
+    interval = 100 / speed_factor  # Adjust the interval in milliseconds
 
-#     # Calculate the number of pause frames based on the pause duration
-#     pause_frames = int((pause_duration * 1000) / interval)
+    # Calculate the number of pause frames based on the pause duration
+    pause_frames = int((pause_duration * 1000) / interval)
 
-#     def init():
-#         # Clear all line segments and reset the satellite point
-#         for line in lines:
-#             line.set_data([], [])
-#             line.set_3d_properties([])
-#         satellite_point.set_data([], [])
-#         satellite_point.set_3d_properties([])
-#         return lines + [satellite_point]
+    def init():
+        # Clear all line segments and reset the satellite point
+        for line in lines:
+            line.set_data([], [])
+            line.set_3d_properties([])
+        satellite_point.set_data([], [])
+        satellite_point.set_3d_properties([])
+        return lines + [satellite_point]
 
-#     def update(frame):
-#         # Determine if we are in the pause phase
-#         if frame >= len(x_data):
-#             # During the pause, just display the last frame
-#             return lines + [satellite_point]
+    def update(frame):
+        # Determine if we are in the pause phase
+        if frame >= len(x_data):
+            # During the pause, just display the last frame
+            return lines + [satellite_point]
 
-#         # Determine the current segment index
-#         segment_idx = np.searchsorted(np.cumsum([segment.shape[1] for segment in maneuver_segments]), frame, side='right')
+        # Determine the current segment index
+        segment_idx = np.searchsorted(np.cumsum([segment.shape[1] for segment in maneuver_segments]), frame, side='right')
         
-#         # Update the current segment line by adding up to the current frame's points
-#         segment_start = 0 if segment_idx == 0 else sum([segment.shape[1] for segment in maneuver_segments[:segment_idx]])
-#         segment_end = frame + 1  # Add one to include the current frame point
-#         lines[segment_idx].set_data(x_data[segment_start:segment_end], y_data[segment_start:segment_end])
-#         lines[segment_idx].set_3d_properties(z_data[segment_start:segment_end])
+        # Update the current segment line by adding up to the current frame's points
+        segment_start = 0 if segment_idx == 0 else sum([segment.shape[1] for segment in maneuver_segments[:segment_idx]])
+        segment_end = frame + 1  # Add one to include the current frame point
+        lines[segment_idx].set_data(x_data[segment_start:segment_end], y_data[segment_start:segment_end])
+        lines[segment_idx].set_3d_properties(z_data[segment_start:segment_end])
 
-#         # Update the position of the satellite point
-#         satellite_point.set_data(x_data[frame], y_data[frame])
-#         satellite_point.set_3d_properties(z_data[frame])
+        # Update the position of the satellite point
+        satellite_point.set_data(x_data[frame], y_data[frame])
+        satellite_point.set_3d_properties(z_data[frame])
         
-#         return lines + [satellite_point]
+        return lines + [satellite_point]
 
-#     # Create the animation with the init function to clear segments on repeat
-#     ani = FuncAnimation(
-#         fig,
-#         update,
-#         frames=len(x_data) + pause_frames,  # Add pause frames at the end
-#         init_func=init,    # Clears the lines at the beginning of each repeat
-#         interval=interval, # Constant interval for each frame
-#         repeat=True,
-#         blit=True
-#     )
+    # Create the animation with the init function to clear segments on repeat
+    ani = FuncAnimation(
+        fig,
+        update,
+        frames=len(x_data) + pause_frames,  # Add pause frames at the end
+        init_func=init,    # Clears the lines at the beginning of each repeat
+        interval=interval, # Constant interval for each frame
+        repeat=True,
+        blit=True
+    )
 
-#     plt.legend()
-#     plt.show()
-#     return ani
+    plt.legend()
+    plt.show()
+    return ani
 
 def plot_current_position(ax, path, label, color, marker='o'):
     """
