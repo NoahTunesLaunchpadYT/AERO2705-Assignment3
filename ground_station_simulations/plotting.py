@@ -10,7 +10,6 @@ from PIL import Image
 import urllib.request
 from matplotlib import cm
 from ground_station_simulations import definitions as d
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.animation import FuncAnimation
 
 # Constants
