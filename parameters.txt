@@ -13,4 +13,6 @@ ullage volume: V_ullage = 0.05
 mass of gas: mass_gas = 0.5
 downlink frequency: downlink_frequency = 27.5e9
 antenna gain: antenna_gain = 40
+Intensity of noise: noise_temp = 290
+Bandwidth of communication: bandwidth = 10e6
 transmitted power: power_transmitted = 10

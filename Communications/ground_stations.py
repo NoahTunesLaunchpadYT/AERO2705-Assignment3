@@ -6,21 +6,24 @@ import ground_station_simulations.transfer_search_algorithms as ta
 
 class GroundStation:
     def __init__(self, params, AOCS):
-        print("GroundStation initialised")
-
         self.params = params
         self.target_orbits = []
         self.AOCS = AOCS
         self.starting_orbit = self.get_starting_orbit()
-        self.solution_ts = [[]]
-        self.solution_ys = [[[]]]
+        self.solution_ts = None 
+        self.solution_ys = None
 
     def send_solution(self):
         self.target_orbits = self.generate_three_random_orbits()
         
         orbit_list = [self.generate_starting_orbit()] + self.target_orbits
+        print(orbit_list)
         
+        for i in range(0, len(orbit_list)):
+            print(orbit_list[i]["altitude_of_apogee"])
+
         path = ta.get_best_solution(orbit_list, "hohmann-like", True)
+
         self.solution_ts = path.time_array_segments
         self.solution_ys = path.solution_array_segments
 
@@ -71,7 +74,7 @@ class GroundStation:
         weights = [(3790/4550), (139/4550), (565/4550), (56/4550)]  # 83.3% LEO, 3.05% MEO, 12.42% GEO, 1.23% HEO
         random_orbits = []
         
-        print("\nPlease input an orbit type of: LEO, MEO, GEO, HEO. Empty or invalid inputs will generate random parameters.")
+        print("Please input an orbit type of: LEO, MEO, GEO, HEO. Empty or invalid inputs will generate random parameters.")
         
         for i in range(3):
             input_type = input(f"What type of orbit will orbit {i+1} be? ").upper().strip()
@@ -104,10 +107,7 @@ class GroundStation:
             }
             
             random_orbits.append(generated_orbit)
-
-        for i in range(0, 3):
-            print(f"Orbit {i + 1} - Type: {input_type}")
-
+    
         return random_orbits
     
     def get_starting_orbit(self):
@@ -137,23 +137,3 @@ class GroundStation:
         }
 
         return starting_params
-
-class Communications:
-    def __init__(self, params, AOCS):
-        print("Communications initialised")
-        satellite_position = AOCS.solution_ys[0][0][0:3]
-
-        self.params = params
-        self.AOCS = AOCS
-        self.gs = self.select_best_station(satellite_position)
-
-    def receive_solution(self):
-        return self.gs.send_solution()        
-
-    def select_best_station(self, satellite_position):
-        x, y, z = satellite_position
-
-        gs = GroundStation(self.params, self.AOCS)
-        
-        return gs
-    

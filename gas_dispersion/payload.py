@@ -67,6 +67,7 @@ def extract_position_components(state_array) -> np.ndarray:
 
 class Payload:
     def __init__(self, params, satellite):
+        print("Payload initialised")
         self.satellite = satellite
         
         # Parameters for hydrazine dispersal in space
@@ -84,7 +85,7 @@ class Payload:
         # loop over every other orbit (the target orbits) and simulate payload function there
         print((round(len(solution_arrays) + 1) / 2))
 
-        for i in range(1, round((len(solution_arrays) + 1) / 2)):
+        for i in range(1, 4):
             orbit_index = i*2
 
             orbit = solution_arrays[orbit_index]
@@ -121,43 +122,43 @@ class Payload:
             orbit_positions_eci = extract_position_components( orbit )
             gas_plume_sim.plot_orbit_and_gas(positions, satellite_position, orbit_positions_eci, N_molecules=1000)
 
-            # Define absorption properties for gases
-            gases = [
-                absorption.GasAbsorptionSimulator(name="Hydrazine", peak_wavelength=9.7, peak_height=0.9),  # Hydrazine properties
-                absorption.GasAbsorptionSimulator(name="Inteference A", peak_wavelength=12.0, peak_height=0.3),  # Interfering gas A properties
-                absorption.GasAbsorptionSimulator(name="Inteference B", peak_wavelength=10.6, peak_height=0.2)  # Interfering gas B properties
-            ]
+        # Define absorption properties for gases
+        gases = [
+            absorption.GasAbsorptionSimulator(name="Hydrazine", peak_wavelength=9.7, peak_height=0.9),  # Hydrazine properties
+            absorption.GasAbsorptionSimulator(name="Inteference A", peak_wavelength=12.0, peak_height=0.3),  # Interfering gas A properties
+            absorption.GasAbsorptionSimulator(name="Inteference B", peak_wavelength=10.6, peak_height=0.2)  # Interfering gas B properties
+        ]
 
-            # List of standard deviations for absorption simulation (σ values, dimensionless)
-            std_devs = [0.05, 0.25, 0.5]
+        # List of standard deviations for absorption simulation (σ values, dimensionless)
+        std_devs = [0.05, 0.25, 0.5]
 
-            # Molar absorptivity for hydrazine (in L·mol^{-1}·cm^{-1}), an example value
-            molar_absorptivity_hydrazine = 8.1e4
+        # Molar absorptivity for hydrazine (in L·mol^{-1}·cm^{-1}), an example value
+        molar_absorptivity_hydrazine = 8.1e4
 
-            # Create the transmittance simulation object
-            transmitance_sim = absorption.TransmittanceSimulator(gases=gases, std_devs=std_devs)
+        # Create the transmittance simulation object
+        transmitance_sim = absorption.TransmittanceSimulator(gases=gases, std_devs=std_devs)
 
-            # Run the transmittance simulation to generate transmittance data for each standard deviation
-            transmitance_sim.simulate_transmittance()
+        # Run the transmittance simulation to generate transmittance data for each standard deviation
+        transmitance_sim.simulate_transmittance()
 
-            # Calculate and print concentrations at 3 distances: 1/3, 2/3, and full plume width
-            distances = [(plume_width / 1000) * fraction for fraction in (1/3, 2/3, 1)]  # Convert plume width to km
-            for distance in distances:
-                transmitance_sim.print_concentration_for_distance(molar_absorptivity_hydrazine, distance)
+        # Calculate and print concentrations at 3 distances: 1/3, 2/3, and full plume width
+        distances = [(plume_width / 1000) * fraction for fraction in (1/3, 2/3, 1)]  # Convert plume width to km
+        for distance in distances:
+            transmitance_sim.print_concentration_for_distance(molar_absorptivity_hydrazine, distance)
 
-            # Plot the transmittance spectra for all standard deviations
-            transmitance_sim.plot_transmittance()
+        # Plot the transmittance spectra for all standard deviations
+        transmitance_sim.plot_transmittance()
 
-            # For very small length of hydrazine medium such as at the orifice
-            transmitance_sim.print_concentration_for_distance(molar_absorptivity_hydrazine, 1e-3)
-            concentration = transmitance_sim.calculate_concentration(molar_absorptivity_hydrazine, 1e-3, 0.25)
+        # For very small length of hydrazine medium such as at the orifice
+        transmitance_sim.print_concentration_for_distance(molar_absorptivity_hydrazine, 1e-3)
+        concentration = transmitance_sim.calculate_concentration(molar_absorptivity_hydrazine, 1e-3, 0.25)
 
-            # Create and run the diffusion simulation with parameters
-            gas_disp_sim = gas_dispersion.DiffusionSimulator(
-                50,  # Grid size for diffusion simulation (n by n grid)
-                200,  # Number of time steps for diffusion simulation
-                1e5,  # Diffusion coefficient for hydrazine (example value in m²/s)
-                concentration,  # Concentration at the source
-                0.1 # Time step size (s)
-            )
-            gas_disp_sim.run_simulation()
+        # Create and run the diffusion simulation with parameters
+        gas_disp_sim = gas_dispersion.DiffusionSimulator(
+            50,  # Grid size for diffusion simulation (n by n grid)
+            200,  # Number of time steps for diffusion simulation
+            1e5,  # Diffusion coefficient for hydrazine (example value in m²/s)
+            concentration,  # Concentration at the source
+            0.1 # Time step size (s)
+        )
+        gas_disp_sim.run_simulation()

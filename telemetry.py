@@ -204,7 +204,6 @@ class Communications:
         # Show the plot
         plt.legend()
         plt.show()
-
         
         distances = []
 

@@ -2,9 +2,11 @@ from Communications import communications as comms
 from Communications import orbits as o
 from gas_dispersion import payload as pld
 import constants as c
+import numpy as np
 
 class AOCS:
     def __init__(self, params):
+        print("AOCS initialised")
         self.initial_alt_p = params['alt_p']
         self.initial_alt_a = params['alt_a']
         self.initial_inclination = params['i_deg']
@@ -30,9 +32,11 @@ class AOCS:
 
 
     def run(self):
-        print("Getting solution...")
         self.solution_ts, self.solution_ys = self.communications.receive_solution()
         
+        self.concatenated_state_array = np.hstack(self.solution_ys)
+        self.concatenated_time_array = np.hstack(self.solution_ts)
+
         self.payload.simulate_payload_on_path(self.solution_ts, self.solution_ys)
         
         gs = self.communications.select_best_station(self.solution_ys[-1][0:3, -1])

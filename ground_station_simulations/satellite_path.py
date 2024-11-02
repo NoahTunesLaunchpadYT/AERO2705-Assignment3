@@ -3,6 +3,7 @@ from scipy.integrate import solve_ivp
 from ground_station_simulations import orbit as o
 from ground_station_simulations import linear_algebra as la
 from ground_station_simulations import definitions as d
+from ground_station_simulations import plotting as pl
 
 class SatellitePath:
     """
@@ -32,7 +33,7 @@ class SatellitePath:
     MU = d.MU                 # km^3/s^2
     EQUATORIAL_RADIUS = d.EQUATORIAL_RADIUS    # km
     J2 = 1.08263e-3
-    SIMULATION_RESOLUTION = 500
+    TIME_STEP = 100 # s
     MAX_ORBIT_DURATION = 1e7
 
     def __init__(self) -> None:
@@ -41,7 +42,8 @@ class SatellitePath:
         self.solution_array_segments = []          # List to store maneuver segments
         self.time_array_segments = []
         self.num_segments = 0                  # The number of segments so far
-        self.dv = [] # Total delta v for path
+        self.dv_vecs = []
+        self.dvs = [] # Total delta v for path
         self.dv_total = 0
         self.ta_at_last_impulse = 0
 
@@ -99,22 +101,27 @@ class SatellitePath:
         # Return derivatives [x_dot, y_dot, z_dot, x_ddot, y_ddot, z_ddot]
         return np.array([x_dot, y_dot, z_dot, x_ddot, y_ddot, z_ddot])
 
-    def simulate_coast(self, duration=3600):
+    def simulate_coast(self, duration=3600, time_step=TIME_STEP):
         """
-        Simulate a coast phase that stops once the spacecraft reaches the target azimuth.
+        Simulate a coast phase with a constant time step until the spacecraft reaches the target azimuth.
+        
+        Args:
+            duration (float): Duration of the coast phase in seconds.
+            time_step (float): Constant time step for the simulation in seconds.
         """
         if duration < 1e-6:
-            print(f"ValueError: 'duration' is too small {duration}")
+            raise ValueError(f"'duration' is too small: {duration}")
 
         # Normalize target azimuth to the range [-π, π]
         last_segment = self.solution_array_segments[-1]
         initial_state = last_segment[:, -1]
         starting_time = self.time_array_segments[-1][-1]
-        
-        t_span = (starting_time, starting_time+duration)  # Use a large time span, we'll stop at the event
-        t_eval = np.linspace(t_span[0], t_span[1], self.SIMULATION_RESOLUTION)
 
-        # Solve the ODE for the coast phase with the event to stop at the target azimuth
+        # Define the time span and constant time steps for evaluation
+        t_span = (starting_time, starting_time + duration)
+        t_eval = np.arange(t_span[0], t_span[1], time_step)  # Constant time step
+
+        # Solve the ODE for the coast phase with constant time steps
         solution = solve_ivp(
             self.ode_func,
             t_span,
@@ -124,13 +131,14 @@ class SatellitePath:
             rtol=1e-9,         # Increase tolerance for higher accuracy
             atol=1e-12         # Set absolute tolerance to complement relative tolerance
         )
+
         # Append the new results to the existing state array
         self.solution_array_segments[-1] = np.hstack(
             (self.solution_array_segments[-1], solution.y))  # Append along columns
 
         self.time_array_segments[-1] = np.hstack(
             (self.time_array_segments[-1], solution.t))  # Add time steps
-
+        
 
     def normalize_angle(self, angle):
         """Normalize an angle to the range [-π, π]."""
@@ -149,9 +157,15 @@ class SatellitePath:
         last_velocity = last_state[3:6]  # Extract the velocity components
         
         # Calculate delta-v for the maneuver (magnitude of the velocity change)
-        dv = np.linalg.norm(target_velocity - last_velocity)
-        self.dv.append(dv)
+        dv_vec = target_velocity - last_velocity
+        dv = np.linalg.norm(dv_vec)
+        
+        self.dv_vecs.append(dv_vec)
+        self.dvs.append(dv)
         self.dv_total += dv
+
+        # print(f"New impulse dv: {dv}")
+        # print(f"dv_total: {self.dv_total}")
 
         # Create a new state vector with the updated velocity and mass, then append to the state_array
         new_state = np.copy(last_state)
@@ -164,17 +178,13 @@ class SatellitePath:
         
         self.time_array_segments.append(np.array([self.time_array_segments[self.num_segments-1][-1]])) # Copy last time value 
 
-    def generate_path(self, orbits_params, sequence_type="All", plotting = False, ax=None):
+    def generate_path(self, orbits_params, sequence_type="All", plotting = False, ax=None):        
         self.initial_state_from_orbit_params(orbits_params[0])
 
         most_recent_state_vector = self.solution_array_segments[-1][:, -1]
-        # if ax:
-        #     print(f"Starting ta: {0}")
-        #     print(f"Starting state: {most_recent_state_vector}")        
-        #     pl.plot_state(ax, most_recent_state_vector, "green")
 
         # Try all transfer methods and pick the best one
-        if len(orbits_params) > 2:
+        if len(orbits_params) >= 2:
             self.ta_at_last_impulse = orbits_params[0]["initial_true_anomaly"]
             for i in range(1, len(orbits_params)):
                 starting_orbit = o.Orbit()
@@ -231,13 +241,8 @@ class SatellitePath:
                         self.generate_lambert_transfer(starting_orbit, target_orbit, plotting=plotting, ax=ax)
 
                 if sequence_type == "hohmann-like":
-                    print(f"\nHOHMANN TRANSFER {i}")
-
                     self.generate_hohman_like_transfer(starting_orbit, target_orbit, plotting=plotting, ax=ax)
                     
-                    # print("Hohmann transfer delta-V:")
-                    # print(self.dv)
-
                 elif sequence_type == "circularising":
                     self.generate_circularising_transfer(starting_orbit, target_orbit, plotting=plotting, ax=ax)
                 elif sequence_type == "lambert":
@@ -372,10 +377,10 @@ class SatellitePath:
         coast_1_duration = starting_orbit.calculate_time_between_anomalies(
             self.ta_at_last_impulse, ta_starting_orbit_at_node_line)
 
-        print(f"Coast start ta: {self.ta_at_last_impulse}")
-        print(f"Coast end ta: {ta_starting_orbit_at_node_line}")
-        print(f"Coast duration: {coast_1_duration}")
-        print(f"Orbital Period of starting orbit: {starting_orbit.orbital_period}")
+        # print(f"Coast start ta: {self.ta_at_last_impulse}")
+        # print(f"Coast end ta: {ta_starting_orbit_at_node_line}")
+        # print(f"Coast duration: {coast_1_duration}")
+        # print(f"Orbital Period of starting orbit: {starting_orbit.orbital_period}")
         
         # print("Ta stuff:")
         # print((self.ta_at_last_impulse, ta_starting_orbit_at_node_line))
@@ -401,7 +406,15 @@ class SatellitePath:
         self.simulate_coast(coast_2_duration)
         self.simulate_impulse(target_orbit.get_velocity(ta_target_orbit_at_node_line))
 
+        target_orbit.get_radius_vector(ta_target_orbit_at_node_line)
+        
         last_state = self.solution_array_segments[-1][:, -1]
+
+        r = target_orbit.get_radius_vector(ta_target_orbit_at_node_line)
+
+        # if ax:
+        #     pl.plot_current_position(ax, r, 'pink', "target_orbit_param")
+        #     pl.plot_state(ax, last_state, 'purple')
 
         current_orbit.calculate_initial_parameters_from_state_vector(last_state)
 

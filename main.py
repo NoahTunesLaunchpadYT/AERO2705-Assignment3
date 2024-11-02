@@ -8,6 +8,9 @@ import gas_dispersion.gas_dispersion as gd
 
 
 def main():
+    print("\n" + "="*47)
+    print("      🚀 Starting ICARUS Simulation 🚀")
+    print("="*47 + "\n")
     satellite = s.Satellite("parameters.txt")
     satellite.launch()
 
@@ -16,8 +19,8 @@ def main():
     p.test_propulsion_subsystem()
 
     # Science testing
-    ai.test_absorption_interference()
-    gd.test_gas_dispersion()
+    # ai.test_absorption_interference()
+    # gd.test_gas_dispersion()
 
 if __name__ == "__main__":
     main()

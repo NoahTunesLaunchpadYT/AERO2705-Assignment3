@@ -172,6 +172,9 @@ class Orbit:
         r_norm = np.linalg.norm(self.initial_displacement)
         v_norm = np.linalg.norm(self.initial_velocity)
         self.specific_energy = (v_norm**2) / 2 - self.MU / r_norm
+
+        if self.specific_energy >= 0:
+            self.specific_energy == -0.00001
     
     def calculate_eccentricity_from_angular_momentum(self) -> None:
         # Eccentricity vector e = (v × h)/μ - r̂
@@ -318,14 +321,15 @@ class Orbit:
         """
         Calculate the semi-major axis based on the radii of perigee and apogee.
         """    
+        
         self.semi_major_axis = (self.radius_of_apogee + self.radius_of_perigee) /2
-
     def calculate_period_from_semi_major_axis(self) -> None:
         """
         Calculate the orbital period based on the semi-major axis using Kepler's Third Law.
         """
         mu = self.MU
         a = self.semi_major_axis
+
         T = 2 * np.pi / np.sqrt(mu) * a**(3/2)
         self.orbital_period = T
 
